@@ -1,6 +1,6 @@
 # TaosKeeper
 
-TDengine Metrics Exporter, you can obtain the running status of TDengine by performing several simple configurations.
+TDengine Metrics Exporter, you can obtain the running status of TDengine version 3.0 by performing several simple configurations.
 
 This tool uses TDengine RESTful API, so you could just build it without TDengine client.
 
