@@ -13,8 +13,8 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
-debug/
-.idea/
-config/
-taoskeeper
-.vscode
+/debug/
+/.idea/
+/config/
+/taoskeeper
+/.vscode
