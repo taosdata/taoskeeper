@@ -1,0 +1,15 @@
+[Unit]
+Description=TaosKeeper - TDengine Metrics Exporter for Kinds of Collectors
+Documentation=https://www.taosdata.com
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/taoskeeper
+TimeoutSec=0
+RestartSec=2
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
