@@ -150,3 +150,14 @@ CMD ["taoskeeper"]
 * Why detection metrics displayed by different TDengines inconsistent with taoskeeper monitoring?
 
   **Answer**: If a metric is not created in TDengine, taoskeeper cannot get the corresponding test results.
+
+* Cannot receive log from TDengine server.
+  
+  **Answer**: Modify `/etc/taos/taos.cfg` file and add parameters like:
+  ```
+  monitor                  1  // start monitor
+  monitorInterval          5  // send log interval (s)
+  monitorFqdn              localhost 
+  monitorPort              6043 // taosKeeper port
+  monitorMaxLogs           100
+  ```
