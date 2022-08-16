@@ -152,3 +152,15 @@ CMD ["taoskeeper"]
 * taosKeeper 监控不同 TDengine 显示的检测指标数目不一致？
 
   **解析**：如果 TDengine 中未创建某项指标，taoskeeper 不能获取对应的检测结果。
+
+* 不能接收到 TDengine 的监控日志。
+
+  **解析**: 修改 `/etc/taos/taos.cfg` 文件并增加如下参数：
+  ```
+  monitor                  1  // 启用monitor
+  monitorInterval          30  // 发送间隔 (s)
+  monitorFqdn              localhost // 接收消息的FQDN，默认为空
+  monitorPort              6043      // 接收消息的端口号
+  monitorMaxLogs           100       // 每个监控间隔缓存的最大日志数量
+  ```
+  
