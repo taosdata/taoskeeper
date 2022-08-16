@@ -156,7 +156,7 @@ CMD ["taoskeeper"]
   **Answer**: Modify `/etc/taos/taos.cfg` file and add parameters like:
   ```
   monitor                  1  // start monitor
-  monitorInterval          5  // send log interval (s)
+  monitorInterval          30  // send log interval (s)
   monitorFqdn              localhost 
   monitorPort              6043 // taosKeeper port
   monitorMaxLogs           100

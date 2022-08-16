@@ -158,7 +158,7 @@ CMD ["taoskeeper"]
   **解析**: 修改 `/etc/taos/taos.cfg` 文件并增加如下参数：
   ```
   monitor                  1  // 启用monitor
-  monitorInterval          5  // 发送间隔
+  monitorInterval          30  // 发送间隔 (s)
   monitorFqdn              localhost // 接收消息的FQDN，默认为空
   monitorPort              6043      // 接收消息的端口号
   monitorMaxLogs           100       // 每个监控间隔缓存的最大日志数量
