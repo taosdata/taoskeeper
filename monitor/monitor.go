@@ -9,6 +9,7 @@ import (
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
+	"github.com/taosdata/taoskeeper/util/pool"
 	"os"
 	"sync/atomic"
 	"time"
@@ -52,7 +53,7 @@ func StartMonitor() {
 		identity = fmt.Sprintf("%s:%d", hostname, config.Conf.Port)
 	}
 	systemStatus := make(chan SysStatus)
-	go func() {
+	_ = pool.GoroutinePool.Submit(func() {
 		for {
 			select {
 			case status := <-systemStatus:
@@ -84,7 +85,7 @@ func StartMonitor() {
 				}
 			}
 		}
-	}()
+	})
 	SysMonitor.Register(systemStatus)
 	interval, err := time.ParseDuration(config.Conf.RotationInterval)
 	if err != nil {
