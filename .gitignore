@@ -15,6 +15,5 @@
 # vendor/
 /debug/
 /.idea/
-/config/
 /taoskeeper
 /.vscode
