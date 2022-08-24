@@ -42,7 +42,7 @@ func Init() {
 	viper.SetConfigName("keeper")
 	viper.AddConfigPath("/etc/taos")
 
-	cp := pflag.String("c", "/etc/taos/keeper.toml", "taoskeeper config file")
+	cp := pflag.StringP("c", "c", "/etc/taos/keeper.toml", "taoskeeper config file")
 	v := pflag.Bool("version", false, "Print the version and exit")
 	help := pflag.BoolP("help", "h", false, "Print this help message and exit")
 	pflag.Parse()
