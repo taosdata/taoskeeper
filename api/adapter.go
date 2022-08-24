@@ -164,7 +164,7 @@ func (imp *AdapterImporter) lineWriteBody(body []byte, addr string) {
 	resp, err := imp.client.Do(req)
 
 	if err != nil {
-		logger.Errorf("query exception: %v", err)
+		logger.Errorf("writing metrics exception: %v", err)
 	}
 	_ = resp.Body.Close()
 }
