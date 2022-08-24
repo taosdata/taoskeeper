@@ -64,14 +64,15 @@ address = ["127.0.0.1:6041","192.168.1.95:6041"]
 # metrics prefix in metrics names.
 prefix = "taos"
 
-# cluster identifier for multiple TDengine clusters
-cluster = "production"
-
 # database for storing metrics data
 database = "log"
 
 # export some tables that are not super table
 tables = ["normal_table"]
+
+[environment]
+# Whether running in cgroup.
+incgroup = false
 ```
 
 Now you could run the tool:
@@ -110,7 +111,7 @@ sudo systemctl enable taoskeeper
 
 Here is an example to show how to build this tool in docker:
 
-Before building, you should configure `keeper.toml`.
+Before building, you should configure `./config/keeper.toml`.
 
 ```dockerfile
 FROM golang:1.17.2 as builder
