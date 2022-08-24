@@ -230,9 +230,6 @@ func (p *Processor) Prepare() {
 						continue
 					}
 					labels := make(map[string]string)
-					if config.Metrics.Cluster != "" {
-						labels["cluster"] = config.Metrics.Cluster
-					}
 					fqName := p.buildFQName(tableName, "", "", "")
 					pDesc := prometheus.NewDesc(fqName, "", nil, labels)
 					metric := &Metric{
@@ -258,9 +255,6 @@ func (p *Processor) Prepare() {
 						continue
 					}
 					labels := make(map[string]string)
-					if config.Metrics.Cluster != "" {
-						labels["cluster"] = config.Metrics.Cluster
-					}
 					fqName := p.buildFQName(tableName, "", column, "")
 					pDesc := prometheus.NewDesc(fqName, "", nil, labels)
 					metric := &Metric{

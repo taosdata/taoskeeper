@@ -40,18 +40,16 @@ func StartMonitor() {
 	if err := conn.Close(); err != nil {
 		logger.WithError(err).Errorf("close connection error")
 	}
-	if len(config.Conf.Metrics.Cluster) != 0 {
-		identity = config.Conf.Metrics.Cluster
-	} else {
-		hostname, err := os.Hostname()
-		if err != nil {
-			logger.WithError(err).Panic("can not get hostname")
-		}
-		if len(hostname) > 40 {
-			hostname = hostname[:40]
-		}
-		identity = fmt.Sprintf("%s:%d", hostname, config.Conf.Port)
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		logger.WithError(err).Panic("can not get hostname")
 	}
+	if len(hostname) > 40 {
+		hostname = hostname[:40]
+	}
+	identity = fmt.Sprintf("%s:%d", hostname, config.Conf.Port)
+
 	systemStatus := make(chan SysStatus)
 	_ = pool.GoroutinePool.Submit(func() {
 		for {
