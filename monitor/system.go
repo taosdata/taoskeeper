@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"github.com/taosdata/taoskeeper/util/pool"
 	"runtime"
 	"sync"
 	"time"
@@ -80,12 +81,12 @@ func Start(collectDuration time.Duration, inCGroup bool) {
 	}
 	SysMonitor.collect()
 	SysMonitor.ticker = time.NewTicker(SysMonitor.collectDuration)
-	go func() {
+	pool.GoroutinePool.Submit(func() {
 		for {
 			select {
 			case <-SysMonitor.ticker.C:
 				SysMonitor.collect()
 			}
 		}
-	}()
+	})
 }

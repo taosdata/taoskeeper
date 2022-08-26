@@ -113,7 +113,8 @@ func insertClusterInfoSql(info ClusterInfo, ClusterID string, protocol int, ts s
 		sqls = append(sqls, fmt.Sprintf("insert into m_info_%s using m_info tags (%d, '%s', '%s') values ('%s', '%s')",
 			ClusterID+strconv.Itoa(mnode.MnodeID), mnode.MnodeID, mnode.MnodeEp, ClusterID, ts, mnode.Role))
 		mtotal++
-		if "unsynced" != mnode.Role {
+		//LEADER FOLLOWER CANDIDATE ERROR
+		if "ERROR" != mnode.Role {
 			malive++
 		}
 	}

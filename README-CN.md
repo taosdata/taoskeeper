@@ -59,6 +59,7 @@ port = 6041
 username = "root"
 password = "taosdata"
 
+
 # 需要被监控的 taosAdapter
 [taosAdapter]
 address = ["127.0.0.1:6041","192.168.1.95:6041"]
@@ -67,14 +68,15 @@ address = ["127.0.0.1:6041","192.168.1.95:6041"]
 # 监控指标前缀
 prefix = "taos"
 
-# 集群数据的标识符
-cluster = "production"
-
 # 存放监控数据的数据库
 database = "log"
 
 # 指定需要监控的普通表
 tables = ["normal_table"]
+
+[environment]
+# 是否在容器中运行，影响 taosKeeper 自身的监控数据
+incgroup = false
 ```
 
 现在可以启动服务，输入：
@@ -113,7 +115,7 @@ sudo systemctl enable taoskeeper
 
 如下介绍了如何在 docker 中构建 taosKeeper： 
 
-在构建前请配置好 `keeper.toml`。
+在构建前请配置好 `./config/keeper.toml`。
 
 ```dockerfile
 FROM golang:1.17.6-alpine as builder

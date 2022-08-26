@@ -2,7 +2,6 @@ package config
 
 type MetricsConfig struct {
 	Prefix   string `toml:"prefix"`
-	Cluster  string `toml:"cluster"`
 	Database string `toml:"database"`
 	Tables   map[string]struct{}
 	Normals  []string `toml:"tables"`
