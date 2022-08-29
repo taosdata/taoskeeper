@@ -1,5 +1,7 @@
 package api
 
+import "strconv"
+
 type Report struct {
 	Ts          string       `json:"ts"`
 	DnodeID     int          `json:"dnode_id"`
@@ -33,6 +35,8 @@ type ClusterInfo struct {
 	Mnodes           []Mnode `json:"mnodes"`
 }
 
+var dnodeEpLen = strconv.Itoa(120)
+
 var CreateClusterInfoSql = "create table if not exists cluster_info (" +
 	"ts timestamp, " +
 	"first_ep binary(134), " +
@@ -64,7 +68,9 @@ type Dnode struct {
 var CreateDnodeSql = "create table if not exists d_info (" +
 	"ts timestamp, " +
 	"status binary(10)" +
-	") tags (dnode_id int, dnode_ep nchar(20), cluster_id nchar(32))"
+	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
+
+var a = "a" + dnodeEpLen
 
 type Mnode struct {
 	MnodeID int    `json:"mnode_id"`
@@ -75,7 +81,7 @@ type Mnode struct {
 var CreateMnodeSql = "create table if not exists m_info (" +
 	"ts timestamp, " +
 	"role binary(10)" +
-	") tags (mnode_id int, mnode_ep nchar(20), cluster_id nchar(32))"
+	") tags (mnode_id int, mnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 type DnodeInfo struct {
 	Uptime                float32 `json:"uptime"`
@@ -144,7 +150,7 @@ var CreateDnodeInfoSql = "create table if not exists dnodes_info (" +
 	"has_qnode int, " +
 	"has_snode int, " +
 	"has_bnode int " +
-	") tags (dnode_id int, dnode_ep nchar(20), cluster_id nchar(32))"
+	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 type DiskInfo struct {
 	Datadir []DataDir `json:"datadir"`
@@ -167,7 +173,7 @@ var CreateDataDirSql = "create table if not exists data_dir (" +
 	"avail bigint, " +
 	"used bigint, " +
 	"total bigint" +
-	") tags (dnode_id int, dnode_ep nchar(20), cluster_id nchar(32))"
+	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 type LogDir struct {
 	Name  string `json:"name"`
@@ -182,7 +188,7 @@ var CreateLogDirSql = "create table if not exists log_dir (" +
 	"avail bigint, " +
 	"used bigint, " +
 	"total bigint" +
-	") tags (dnode_id int, dnode_ep nchar(20), cluster_id nchar(32))"
+	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 type TempDir struct {
 	Name  string `json:"name"`
@@ -197,7 +203,7 @@ var CreateTempDirSql = "create table if not exists temp_dir(" +
 	"avail bigint, " +
 	"used bigint, " +
 	"total bigint " +
-	") tags (dnode_id int, dnode_ep nchar(20), cluster_id nchar(32))"
+	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 type StbInfo struct {
 	StbName      string `json:"stb_name"`
@@ -218,7 +224,7 @@ var CreateVgroupsInfoSql = "create table if not exists vgroups_info (" +
 	"database_name binary(33), " +
 	"tables_num int, " +
 	"status binary(512) " +
-	") tags (dnode_id int, dnode_ep nchar(20), cluster_id nchar(32))"
+	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 type Vnode struct {
 	DnodeID   int    `json:"dnode_id"`
@@ -228,7 +234,7 @@ type Vnode struct {
 var CreateVnodeRoleSql = "create table if not exists vnodes_role (" +
 	"ts timestamp, " +
 	"vnode_role binary(10) " +
-	") tags (dnode_id int, dnode_ep nchar(20), cluster_id nchar(32))"
+	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 type LogInfo struct {
 	Logs    []Log     `json:"logs"`
@@ -245,7 +251,7 @@ var CreateLogSql = "create table if not exists logs (" +
 	"ts timestamp, " +
 	"level binary(10), " +
 	"content nchar(1024)" +
-	") tags (dnode_id int, dnode_ep nchar(20), cluster_id nchar(32))"
+	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 type Summary struct {
 	Level string `json:"level"`
@@ -258,7 +264,7 @@ var CreateSummarySql = "create table if not exists log_summary(" +
 	"info int, " +
 	"debug int, " +
 	"trace int " +
-	") tags (dnode_id int, dnode_ep nchar(20), cluster_id nchar(32))"
+	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 type GrantInfo struct {
 	ExpireTime      int `json:"expire_time"`
@@ -271,7 +277,7 @@ var CreateGrantInfoSql = "create table if not exists grants_info(" +
 	"expire_time int, " +
 	"timeseries_used int, " +
 	"timeseries_total int " +
-	") tags (dnode_id int, dnode_ep nchar(20), cluster_id nchar(32))"
+	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 var CreateKeeperSql = "create table if not exists keeper_monitor (" +
 	"ts timestamp, " +
