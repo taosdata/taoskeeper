@@ -35,7 +35,7 @@ type ClusterInfo struct {
 	Mnodes           []Mnode `json:"mnodes"`
 }
 
-var dnodeEpLen = strconv.Itoa(120)
+var dnodeEpLen = strconv.Itoa(256)
 
 var CreateClusterInfoSql = "create table if not exists cluster_info (" +
 	"ts timestamp, " +
