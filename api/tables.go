@@ -70,8 +70,6 @@ var CreateDnodeSql = "create table if not exists d_info (" +
 	"status binary(10)" +
 	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
-var a = "a" + dnodeEpLen
-
 type Mnode struct {
 	MnodeID int    `json:"mnode_id"`
 	MnodeEp string `json:"mnode_ep"`
