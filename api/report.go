@@ -3,11 +3,12 @@ package api
 import (
 	"context"
 	"fmt"
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"github.com/taosdata/go-utils/json"
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
-	"strconv"
 )
 
 var logger = log.GetLogger("report")
@@ -67,6 +68,7 @@ func handler(c *gin.Context) {
 		return
 	}
 	r := Report{}
+	logger.Trace("report data: %s", data)
 	if e := json.Unmarshal(data, &r); e != nil {
 		logger.WithError(e).Errorf("error occurred while unmarshal request data: %s ", data)
 		return
@@ -141,16 +143,16 @@ func insertDataDirSql(disk DiskInfo, DnodeID int, DnodeEp string, ClusterID stri
 		sqls = append(sqls,
 			fmt.Sprintf("insert into data_dir_%s using data_dir tags (%d, '%s', '%s') values ('%s', '%s', %d, %d, %d, %d)",
 				ClusterID+strconv.Itoa(DnodeID), DnodeID, DnodeEp, ClusterID,
-				ts, data.Name, data.Level, data.Avail, data.Used, data.Total),
+				ts, data.Name, data.Level, data.Avail.IntPart(), data.Used.IntPart(), data.Total.IntPart()),
 		)
 	}
 	sqls = append(sqls,
 		fmt.Sprintf("insert into log_dir_%s using log_dir tags (%d, '%s', '%s') values ('%s', '%s', %d, %d, %d)",
 			ClusterID+strconv.Itoa(DnodeID), DnodeID, DnodeEp, ClusterID,
-			ts, disk.Logdir.Name, disk.Logdir.Avail, disk.Logdir.Used, disk.Logdir.Total),
+			ts, disk.Logdir.Name, disk.Logdir.Avail.IntPart(), disk.Logdir.Used.IntPart(), disk.Logdir.Total.IntPart()),
 		fmt.Sprintf("insert into temp_dir_%s using temp_dir tags (%d, '%s', '%s') values ('%s', '%s', %d, %d, %d)",
 			ClusterID+strconv.Itoa(DnodeID), DnodeID, DnodeEp, ClusterID,
-			ts, disk.Tempdir.Name, disk.Tempdir.Avail, disk.Tempdir.Used, disk.Tempdir.Total),
+			ts, disk.Tempdir.Name, disk.Tempdir.Avail.IntPart(), disk.Tempdir.Used.IntPart(), disk.Tempdir.Total.IntPart()),
 	)
 	return sqls
 }

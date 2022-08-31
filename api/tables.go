@@ -1,6 +1,9 @@
 package api
 
-import "strconv"
+import (
+	"github.com/shopspring/decimal"
+	"strconv"
+)
 
 type Report struct {
 	Ts          string       `json:"ts"`
@@ -157,11 +160,11 @@ type DiskInfo struct {
 }
 
 type DataDir struct {
-	Name  string `json:"name"`
-	Level int    `json:"level"`
-	Avail int64  `json:"avail"`
-	Used  int64  `json:"used"`
-	Total int64  `json:"total"`
+	Name  string          `json:"name"`
+	Level int             `json:"level"`
+	Avail decimal.Decimal `json:"avail"`
+	Used  decimal.Decimal `json:"used"`
+	Total decimal.Decimal `json:"total"`
 }
 
 var CreateDataDirSql = "create table if not exists data_dir (" +
@@ -174,10 +177,10 @@ var CreateDataDirSql = "create table if not exists data_dir (" +
 	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 type LogDir struct {
-	Name  string `json:"name"`
-	Avail int64  `json:"avail"`
-	Used  int64  `json:"used"`
-	Total int64  `json:"total"`
+	Name  string          `json:"name"`
+	Avail decimal.Decimal `json:"avail"`
+	Used  decimal.Decimal `json:"used"`
+	Total decimal.Decimal `json:"total"`
 }
 
 var CreateLogDirSql = "create table if not exists log_dir (" +
@@ -189,10 +192,10 @@ var CreateLogDirSql = "create table if not exists log_dir (" +
 	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 type TempDir struct {
-	Name  string `json:"name"`
-	Avail int64  `json:"avail"`
-	Used  int64  `json:"used"`
-	Total int64  `json:"total"`
+	Name  string          `json:"name"`
+	Avail decimal.Decimal `json:"avail"`
+	Used  decimal.Decimal `json:"used"`
+	Total decimal.Decimal `json:"total"`
 }
 
 var CreateTempDirSql = "create table if not exists temp_dir(" +
