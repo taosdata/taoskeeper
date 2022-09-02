@@ -9,7 +9,10 @@ require (
 	github.com/panjf2000/ants/v2 v2.4.6
 	github.com/prometheus/client_golang v1.12.2
 	github.com/shirou/gopsutil v3.21.11+incompatible
+	github.com/shopspring/decimal v1.3.1
 	github.com/sirupsen/logrus v1.8.1
+	github.com/spf13/pflag v1.0.5
+	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.7.4
 	github.com/taosdata/driver-go/v3 v3.0.0-20220707070353-31ea371e8aa0
 	github.com/taosdata/go-utils v0.0.0-20211022070036-018cc5f2432a
@@ -51,7 +54,6 @@ require (
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/consul/api v1.12.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-hclog v1.2.0 // indirect
@@ -64,7 +66,6 @@ require (
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/kr/pretty v0.3.0 // indirect
 	github.com/leodido/go-urn v1.2.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
@@ -91,8 +92,6 @@ require (
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/spf13/viper v1.12.0 // indirect
 	github.com/subosito/gotenv v1.3.0 // indirect
 	github.com/tidwall/gjson v1.14.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
