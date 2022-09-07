@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"github.com/taosdata/taoskeeper/infrastructure/log"
 	"github.com/taosdata/taoskeeper/util/pool"
 	"github.com/taosdata/taoskeeper/version"
 	"os"
@@ -85,6 +86,7 @@ func Init() {
 	}
 	Conf.Cors.Init()
 	pool.Init(Conf.GoPoolSize)
+	log.Init(Conf.LogLevel)
 	Conf.TDengine = TDengineRestful{
 		Host:     viper.GetString("tdengine.host"),
 		Port:     viper.GetInt("tdengine.port"),

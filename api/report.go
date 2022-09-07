@@ -68,7 +68,7 @@ func handler(c *gin.Context) {
 		return
 	}
 	r := Report{}
-	logger.Trace("report data: %s", data)
+	logger.Trace("report data: %s", string(data))
 	if e := json.Unmarshal(data, &r); e != nil {
 		logger.WithError(e).Errorf("error occurred while unmarshal request data: %s ", data)
 		return
