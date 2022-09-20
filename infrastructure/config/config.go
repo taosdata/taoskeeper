@@ -97,7 +97,6 @@ func Init() {
 		Addrs: viper.GetStringSlice("taosAdapter.address"),
 	}
 
-	fmt.Print("TAOS_KEEPER_TAOSADAPTER_ADDRESS = %s", Conf.TaosAdapter.Addrs)
 	Conf.Metrics = MetricsConfig{
 		Prefix:   viper.GetString("metrics.prefix"),
 		Database: viper.GetString("metrics.database"),

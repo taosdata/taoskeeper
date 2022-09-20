@@ -58,7 +58,7 @@ password = "taosdata"
 
 # list of taosAdapter that need to be monitored
 [taosAdapter]
-address = ["127.0.0.1:6041","192.168.1.95:6041"]
+address = ["127.0.0.1:6041"]
 
 [metrics]
 # metrics prefix in metrics names.
@@ -68,7 +68,7 @@ prefix = "taos"
 database = "log"
 
 # export some tables that are not super table
-tables = ["normal_table"]
+tables = []
 
 [environment]
 # Whether running in cgroup.
