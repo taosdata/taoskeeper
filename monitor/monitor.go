@@ -5,14 +5,15 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"os"
+	"sync/atomic"
+	"time"
+
 	"github.com/taosdata/taoskeeper/api"
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
 	"github.com/taosdata/taoskeeper/util/pool"
-	"os"
-	"sync/atomic"
-	"time"
 )
 
 var logger = log.GetLogger("monitor")
@@ -52,35 +53,32 @@ func StartMonitor() {
 
 	systemStatus := make(chan SysStatus)
 	_ = pool.GoroutinePool.Submit(func() {
-		for {
-			select {
-			case status := <-systemStatus:
-				if status.CpuError == nil {
-					cpuPercent = status.CpuPercent
-				}
-				if status.MemError == nil {
-					memPercent = status.MemPercent
-				}
-				report := api.TotalRep
-				totalReport = report
-				atomic.CompareAndSwapInt32(&api.TotalRep, report, 0)
-				kn := md5.Sum([]byte(identity))
-				sql := fmt.Sprintf("insert into `keeper_monitor_%s` using keeper_monitor tags ('%s') values ( now, "+
-					" %f, %f, %d)", hex.EncodeToString(kn[:]), identity, cpuPercent, memPercent, totalReport)
-				conn, err := db.NewConnectorWithDb()
-				if err != nil {
-					logger.WithError(err).Errorf("connect to database error")
-					return
-				}
+		for status := range systemStatus {
+			if status.CpuError == nil {
+				cpuPercent = status.CpuPercent
+			}
+			if status.MemError == nil {
+				memPercent = status.MemPercent
+			}
+			report := api.TotalRep
+			totalReport = report
+			atomic.CompareAndSwapInt32(&api.TotalRep, report, 0)
+			kn := md5.Sum([]byte(identity))
+			sql := fmt.Sprintf("insert into `keeper_monitor_%s` using keeper_monitor tags ('%s') values ( now, "+
+				" %f, %f, %d)", hex.EncodeToString(kn[:]), identity, cpuPercent, memPercent, totalReport)
+			conn, err := db.NewConnectorWithDb()
+			if err != nil {
+				logger.WithError(err).Errorf("connect to database error")
+				return
+			}
 
-				ctx := context.Background()
-				if _, err = conn.Exec(ctx, sql); err != nil {
-					logger.Errorf("execute sql: %s, error: %s", sql, err)
-				}
+			ctx := context.Background()
+			if _, err = conn.Exec(ctx, sql); err != nil {
+				logger.Errorf("execute sql: %s, error: %s", sql, err)
+			}
 
-				if err := conn.Close(); err != nil {
-					logger.WithError(err).Errorf("close connection error")
-				}
+			if err := conn.Close(); err != nil {
+				logger.WithError(err).Errorf("close connection error")
 			}
 		}
 	})
