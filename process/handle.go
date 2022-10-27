@@ -82,6 +82,8 @@ func (p *Processor) Collect(metrics chan<- prometheus.Metric) {
 					}
 					v := i2float(value.Value)
 					if v < 0 {
+						logger.Warningf("negative value for prometheus counter. label %v value %v",
+							value.Label, value.Value)
 						continue
 					}
 					c := cv.With(value.Label)
