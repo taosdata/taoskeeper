@@ -29,7 +29,7 @@ go build
 如果是自行构建的项目，仅需要拷贝 `taoskeeper` 文件到你的 `PATH` 中。
 
 ```sh
-sudo install taoskeeper /usr/local/bin/
+sudo install taoskeeper /usr/bin/
 ```
 
 ## 启动
@@ -104,7 +104,7 @@ sudo systemctl enable taoskeeper
 ```sh
 go mod tidy
 go build
-sudo install taoskeeper /usr/local/bin/
+sudo install taoskeeper /usr/bin/
 sudo cp taoskeeper.service /lib/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl start taoskeeper
@@ -128,7 +128,7 @@ RUN go mod tidy && go build
 
 FROM alpine:3
 RUN mkdir -p /etc/taos
-COPY --from=builder /usr/src/taoskeeper/taoskeeper /usr/local/bin/
+COPY --from=builder /usr/src/taoskeeper/taoskeeper /usr/bin/
 COPY ./config/keeper.toml /etc/taos/keeper.toml
 EXPOSE 6043
 CMD ["taoskeeper"]
@@ -139,7 +139,7 @@ CMD ["taoskeeper"]
 ```dockerfile
 FROM ubuntu:18.04
 RUN mkdir -p /etc/taos
-COPY ./taoskeeper /usr/local/bin/
+COPY ./taoskeeper /usr/bin/
 COPY ./keeper.toml /etc/taos/keeper.toml
 EXPOSE 6043
 CMD ["taoskeeper"]

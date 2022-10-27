@@ -25,12 +25,12 @@ go build
 If you build the tool by your self, just copy the `taoskeeper` binary to your `PATH`.
 
 ```sh
-sudo install taoskeeper /usr/local/bin/
+sudo install taoskeeper /usr/bin/
 ```
 
 ## Start
 
-Before start, you should configure some options like database ip, port or the prefix and others for exported metrics.
+Before start, you should configure some options like database IP, port or the prefix and others for exported metrics.
 
 in `/etc/taos/keeper.toml`.
 
@@ -89,7 +89,7 @@ sudo systemctl daemon-reload
 sudo systemctl start taoskeeper
 ```
 
-To start taoskeeper whenever os rebooted, you should enable the systemd service:
+To start taoskeeper whenever OS rebooted, you should enable the systemd service:
 
 ```sh
 sudo systemctl enable taoskeeper
@@ -100,7 +100,7 @@ So if use `systemd`, you'd better install it with these lines all-in-one:
 ```sh
 go mod tidy
 go build
-sudo install taoskeeper /usr/local/bin/
+sudo install taoskeeper /usr/bin/
 sudo cp taoskeeper.service /lib/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl start taoskeeper
@@ -124,7 +124,7 @@ RUN go mod tidy && go build
 
 FROM alpine:3
 RUN mkdir -p /etc/taos
-COPY --from=builder /usr/src/taoskeeper/taoskeeper /usr/local/bin/
+COPY --from=builder /usr/src/taoskeeper/taoskeeper /usr/bin/
 COPY ./config/keeper.toml /etc/taos/keeper.toml
 EXPOSE 6043
 CMD ["taoskeeper"]
@@ -135,7 +135,7 @@ If you already have taosKeeper binary file, you can build this tool like:
 ```dockerfile
 FROM ubuntu:18.04
 RUN mkdir -p /etc/taos
-COPY ./taoskeeper /usr/local/bin/
+COPY ./taoskeeper /usr/bin/
 COPY ./keeper.toml /etc/taos/keeper.toml
 EXPOSE 6043
 CMD ["taoskeeper"]
@@ -148,7 +148,7 @@ CMD ["taoskeeper"]
   **Answer**: taoskeeper relies on restful interfaces to query data. Check whether the taosAdapter is running or whether
   the taosAdapter address in keeper.toml is correct.
 
-* Why detection metrics displayed by different TDengines inconsistent with taoskeeper monitoring?
+* Why detection metrics displayed by different TDengine's inconsistent with taoskeeper monitoring?
 
   **Answer**: If a metric is not created in TDengine, taoskeeper cannot get the corresponding test results.
 
