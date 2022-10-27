@@ -6,7 +6,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/taoskeeper
+ExecStart=/usr/bin/taoskeeper
 TimeoutSec=0
 RestartSec=2
 Restart=always
