@@ -38,7 +38,6 @@ type Processor struct {
 	rotationInterval time.Duration
 	nextTime         time.Time
 	exitChan         chan struct{}
-	groupMutex       sync.RWMutex
 	dbConn           *db.Connector
 	summaryTable     map[string]*Table
 }
@@ -81,8 +80,14 @@ func (p *Processor) Collect(metrics chan<- prometheus.Metric) {
 					if value.Value == nil {
 						continue
 					}
+					v := i2float(value.Value)
+					if v < 0 {
+						logger.Warningf("negative value for prometheus counter. label %v value %v",
+							value.Label, value.Value)
+						continue
+					}
 					c := cv.With(value.Label)
-					c.Add(i2float(value.Value))
+					c.Add(v)
 					metrics <- c
 				}
 			case Info:
@@ -183,7 +188,7 @@ func (p *Processor) Prepare() {
 	wg := sync.WaitGroup{}
 	wg.Add(len(config.Metrics.Tables))
 
-	for tn, _ := range config.Metrics.Tables {
+	for tn := range config.Metrics.Tables {
 		tableName := tn
 
 		err := pool.GoroutinePool.Submit(func() {

@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/taosdata/taoskeeper/monitor"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
+
+	"github.com/taosdata/taoskeeper/monitor"
 
 	"github.com/taosdata/go-utils/web"
 	"github.com/taosdata/taoskeeper/api"
@@ -33,7 +34,7 @@ func main() {
 	}
 	var g errgroup.Group
 	g.Go(server.ListenAndServe)
-	quit := make(chan os.Signal)
+	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 	<-quit
 	fmt.Println("stop server")

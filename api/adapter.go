@@ -3,16 +3,17 @@ package api
 import (
 	"bytes"
 	"fmt"
-	tmetric "github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/inputs/prometheus"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
-	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	tmetric "github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/inputs/prometheus"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/taosdata/taoskeeper/infrastructure/config"
 )
 
 type AdapterImporter struct {
@@ -165,6 +166,7 @@ func (imp *AdapterImporter) lineWriteBody(body []byte, addr string) {
 
 	if err != nil {
 		logger.Errorf("writing metrics exception: %v", err)
+		return
 	}
 	_ = resp.Body.Close()
 }

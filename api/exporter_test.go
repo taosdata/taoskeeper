@@ -4,15 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
-	"github.com/taosdata/taoskeeper/db"
-	"github.com/taosdata/taoskeeper/infrastructure/config"
-	"github.com/taosdata/taoskeeper/process"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/assert"
+	"github.com/taosdata/taoskeeper/db"
+	"github.com/taosdata/taoskeeper/infrastructure/config"
+	"github.com/taosdata/taoskeeper/process"
 )
 
 var router *gin.Engine
@@ -143,29 +145,29 @@ var report = Report{
 			{
 				Name:  "/root/TDengine/sim/dnode1/data",
 				Level: 0,
-				Avail: 171049893888,
-				Used:  39254581248,
-				Total: 210304475136,
+				Avail: decimal.NewFromInt(171049893888),
+				Used:  decimal.NewFromInt(39254581248),
+				Total: decimal.NewFromInt(210304475136),
 			},
 			{
 				Name:  "/root/TDengine/sim/dnode2/data",
 				Level: 1,
-				Avail: 171049893888,
-				Used:  39254581248,
-				Total: 210304475136,
+				Avail: decimal.NewFromInt(171049893888),
+				Used:  decimal.NewFromInt(39254581248),
+				Total: decimal.NewFromInt(210304475136),
 			},
 		},
 		Logdir: LogDir{
 			Name:  "/root/TDengine/sim/dnode1/log",
-			Avail: 171049771008,
-			Used:  39254704128,
-			Total: 210304475136,
+			Avail: decimal.NewFromInt(171049771008),
+			Used:  decimal.NewFromInt(39254704128),
+			Total: decimal.NewFromInt(210304475136),
 		},
 		Tempdir: TempDir{
 			Name:  "/tmp",
-			Avail: 171049771008,
-			Used:  39254704128,
-			Total: 210304475136,
+			Avail: decimal.NewFromInt(171049771008),
+			Used:  decimal.NewFromInt(39254704128),
+			Total: decimal.NewFromInt(210304475136),
 		},
 	},
 	LogInfos: LogInfo{
