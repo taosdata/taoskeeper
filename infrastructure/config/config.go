@@ -2,12 +2,13 @@ package config
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
 	"github.com/taosdata/taoskeeper/util/pool"
 	"github.com/taosdata/taoskeeper/version"
-	"os"
 
 	"github.com/taosdata/go-utils/web"
 )
@@ -38,6 +39,8 @@ var (
 	Adapter *TaosAdapter
 )
 
+var configPath string
+
 func Init() {
 	viper.SetConfigType("toml")
 	viper.SetConfigName("keeper")
@@ -58,6 +61,8 @@ func Init() {
 		fmt.Printf("%s\n", version.Version)
 		os.Exit(0)
 	}
+
+	configPath = *cp
 	if *cp != "" {
 		viper.SetConfigFile(*cp)
 	}
@@ -166,4 +171,8 @@ func init() {
 	viper.SetDefault("environment.incgroup", false)
 	_ = viper.BindEnv("environment.incgroup", "TAOS_KEEPER_ENVIRONMENT_INCGROUP")
 	pflag.Bool("environment.incgroup", false, `whether running in cgroup. Env "TAOS_KEEPER_ENVIRONMENT_INCGROUP"`)
+}
+
+func GetConfigPath() string {
+	return configPath
 }
