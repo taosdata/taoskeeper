@@ -20,7 +20,7 @@ import (
 func main() {
 	config.Init()
 	router := web.CreateRouter(config.Conf.Debug, &config.Conf.Cors, false)
-	monitor.StartMonitor()
+	monitor.StartMonitor("")
 	report := api.Report{}
 	report.Init(router)
 	processor := process.NewProcessor()

@@ -18,15 +18,7 @@ import (
 
 var logger = log.GetLogger("monitor")
 
-var (
-	cpuPercent  float64
-	memPercent  float64
-	totalReport int32
-)
-
-var identity string
-
-func StartMonitor() {
+func StartMonitor(identity string) {
 	conn, err := db.NewConnector()
 	if err != nil {
 		logger.WithError(err).Errorf("connect to database error")
@@ -42,17 +34,25 @@ func StartMonitor() {
 		logger.WithError(err).Errorf("close connection error")
 	}
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		logger.WithError(err).Panic("can not get hostname")
+	if len(identity) == 0 {
+		hostname, err := os.Hostname()
+		if err != nil {
+			logger.WithError(err).Panic("can not get hostname")
+		}
+		if len(hostname) > 40 {
+			hostname = hostname[:40]
+		}
+		identity = fmt.Sprintf("%s:%d", hostname, config.Conf.Port)
 	}
-	if len(hostname) > 40 {
-		hostname = hostname[:40]
-	}
-	identity = fmt.Sprintf("%s:%d", hostname, config.Conf.Port)
 
 	systemStatus := make(chan SysStatus)
 	_ = pool.GoroutinePool.Submit(func() {
+		var (
+			cpuPercent  float64
+			memPercent  float64
+			totalReport int32
+		)
+
 		for status := range systemStatus {
 			if status.CpuError == nil {
 				cpuPercent = status.CpuPercent

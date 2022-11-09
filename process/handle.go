@@ -203,14 +203,12 @@ func (p *Processor) Prepare() {
 				}
 				return
 			}
-			var tags []string
-			var columns []string
-			var columnList []string
-			var typeList []string
-			var metrics []*Metric
-			columnMap := make(map[string]struct{})
-			newMetrics := make(map[string]*Metric)
-			variablesMap := make(map[string]struct{})
+
+			tags := make([]string, 0, len(data.Data))
+			columns := make([]string, 0, len(data.Data))
+			typeList := make([]string, 0, len(data.Data))
+			columnMap := make(map[string]struct{}, len(data.Data))
+			variablesMap := make(map[string]struct{}, len(data.Data))
 			for _, info := range data.Data {
 				if info[3].(string) != "" {
 					variable := info[0].(string)
@@ -224,56 +222,41 @@ func (p *Processor) Prepare() {
 				}
 			}
 
-			_, exist := p.summaryTable[tableName]
-			if exist {
-				for i, column := range columns {
-					_, exist := variablesMap[column]
-					if exist {
-						continue
-					}
-					if typeList[i] == "TIMESTAMP" {
-						continue
-					}
-					labels := make(map[string]string)
-					fqName := p.buildFQName(tableName, "", "", "")
-					pDesc := prometheus.NewDesc(fqName, "", nil, labels)
-					metric := &Metric{
-						Type:        Summary,
-						Desc:        pDesc,
-						FQName:      fqName,
-						Help:        "",
-						ConstLabels: labels,
-					}
-					metrics = append(metrics, metric)
-					newMetrics[column] = metric
-					columnList = append(columnList, column)
-				}
-			} else {
-				for i, column := range columns {
-					// Ignore column that listed in variables.
-					_, exist := variablesMap[column]
-					if exist {
-						continue
-					}
+			metrics := make([]*Metric, 0, len(columns))
+			newMetrics := make(map[string]*Metric, len(columns))
+			columnList := make([]string, 0, len(columns))
 
-					if typeList[i] == "TIMESTAMP" {
-						continue
-					}
-					labels := make(map[string]string)
-					fqName := p.buildFQName(tableName, "", column, "")
-					pDesc := prometheus.NewDesc(fqName, "", nil, labels)
-					metric := &Metric{
-						Type:        exchangeDBType(typeList[i]),
-						Desc:        pDesc,
-						FQName:      fqName,
-						Help:        "",
-						ConstLabels: labels,
-					}
-					metrics = append(metrics, metric)
-					newMetrics[column] = metric
-					columnList = append(columnList, column)
+			_, exist := p.summaryTable[tableName]
+			for i, column := range columns {
+				if _, columnExist := variablesMap[column]; columnExist {
+					continue
 				}
+
+				if typeList[i] == "TIMESTAMP" {
+					continue
+				}
+
+				columnName, metricType := "", Summary
+				if !exist {
+					columnName = column
+					metricType = exchangeDBType(typeList[i])
+				}
+
+				labels := make(map[string]string)
+				fqName := p.buildFQName(tableName, "", columnName, "")
+				pDesc := prometheus.NewDesc(fqName, "", nil, labels)
+				metric := &Metric{
+					Type:        metricType,
+					Desc:        pDesc,
+					FQName:      fqName,
+					Help:        "",
+					ConstLabels: labels,
+				}
+				metrics = append(metrics, metric)
+				newMetrics[column] = metric
+				columnList = append(columnList, column)
 			}
+
 			t := &Table{
 				Variables:  tags,
 				Metrics:    metrics,
@@ -456,6 +439,10 @@ func (p *Processor) buildFQName(tableName, alias, column, unit string) string {
 func (p *Processor) Close() error {
 	close(p.exitChan)
 	return p.dbConn.Close()
+}
+
+func (p *Processor) GetMetric() map[string]*Table {
+	return p.metrics
 }
 
 func exchangeDBType(t string) CollectType {
