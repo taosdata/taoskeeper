@@ -124,10 +124,6 @@ func (r *Reporter) GetTotalRep() *atomic.Uint32 {
 	return &r.totalRep
 }
 
-func (r *Reporter) ResetTotalRep() {
-	r.totalRep.Store(0)
-}
-
 func insertClusterInfoSql(info ClusterInfo, ClusterID string, protocol int, ts string) []string {
 	var sqls []string
 	var dtotal, dalive, mtotal, malive int

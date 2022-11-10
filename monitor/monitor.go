@@ -47,8 +47,9 @@ func StartMonitor(identity string, conf *config.Config, reporter *api.Reporter) 
 	systemStatus := make(chan SysStatus)
 	_ = pool.GoroutinePool.Submit(func() {
 		var (
-			cpuPercent float64
-			memPercent float64
+			cpuPercent  float64
+			memPercent  float64
+			totalReport uint32
 		)
 
 		for status := range systemStatus {
@@ -58,8 +59,17 @@ func StartMonitor(identity string, conf *config.Config, reporter *api.Reporter) 
 			if status.MemError == nil {
 				memPercent = status.MemPercent
 			}
-			totalReport := reporter.GetTotalRep().Load()
-			reporter.ResetTotalRep()
+
+			totalResp := reporter.GetTotalRep()
+			for i := 0; i < 3; i++ {
+				totalReport = totalResp.Load()
+				if totalResp.CompareAndSwap(totalReport, 0) {
+					break
+				}
+				logger.Warn("Reset keeper_monitor total resp via cas fail! Maybe to many concurrent ")
+				reporter.GetTotalRep().Store(0)
+			}
+
 			kn := md5.Sum([]byte(identity))
 			sql := fmt.Sprintf("insert into `keeper_monitor_%s` using keeper_monitor tags ('%s') values ( now, "+
 				" %f, %f, %d)", hex.EncodeToString(kn[:]), identity, cpuPercent, memPercent, totalReport)
