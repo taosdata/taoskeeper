@@ -33,15 +33,7 @@ type TDengineRestful struct {
 	Password string
 }
 
-var (
-	Conf    *Config
-	Metrics *MetricsConfig
-	Adapter *TaosAdapter
-)
-
-var configPath string
-
-func Init() {
+func InitConfig() *Config {
 	viper.SetConfigType("toml")
 	viper.SetConfigName("keeper")
 	viper.AddConfigPath("/etc/taos")
@@ -62,7 +54,6 @@ func Init() {
 		os.Exit(0)
 	}
 
-	configPath = *cp
 	if *cp != "" {
 		viper.SetConfigFile(*cp)
 	}
@@ -82,37 +73,36 @@ func Init() {
 		}
 	}
 
-	Conf = &Config{
+	conf := &Config{
 		Debug:            viper.GetBool("debug"),
 		Port:             viper.GetInt("port"),
 		LogLevel:         viper.GetString("logLevel"),
 		GoPoolSize:       viper.GetInt("gopoolsize"),
 		RotationInterval: viper.GetString("RotationInterval"),
 	}
-	Conf.Cors.Init()
-	pool.Init(Conf.GoPoolSize)
-	log.Init(Conf.LogLevel)
-	Conf.TDengine = TDengineRestful{
+	conf.Cors.Init()
+	pool.Init(conf.GoPoolSize)
+	log.Init(conf.LogLevel)
+	conf.TDengine = TDengineRestful{
 		Host:     viper.GetString("tdengine.host"),
 		Port:     viper.GetInt("tdengine.port"),
 		Username: viper.GetString("tdengine.username"),
 		Password: viper.GetString("tdengine.password"),
 	}
-	Conf.TaosAdapter = TaosAdapter{
+	conf.TaosAdapter = TaosAdapter{
 		Addrs: viper.GetStringSlice("taosAdapter.address"),
 	}
 
-	Conf.Metrics = MetricsConfig{
+	conf.Metrics = MetricsConfig{
 		Prefix:   viper.GetString("metrics.prefix"),
 		Database: viper.GetString("metrics.database"),
 		Tables:   map[string]struct{}{},
 		Normals:  viper.GetStringSlice("metrics.tables"),
 	}
-	Conf.Env = Environment{
+	conf.Env = Environment{
 		InCGroup: viper.GetBool("environment.incgroup"),
 	}
-	Metrics = &Conf.Metrics
-	Adapter = &Conf.TaosAdapter
+	return conf
 }
 
 func init() {
@@ -171,8 +161,4 @@ func init() {
 	viper.SetDefault("environment.incgroup", false)
 	_ = viper.BindEnv("environment.incgroup", "TAOS_KEEPER_ENVIRONMENT_INCGROUP")
 	pflag.Bool("environment.incgroup", false, `whether running in cgroup. Env "TAOS_KEEPER_ENVIRONMENT_INCGROUP"`)
-}
-
-func GetConfigPath() string {
-	return configPath
 }

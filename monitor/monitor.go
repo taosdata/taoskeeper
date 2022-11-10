@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"sync/atomic"
 	"time"
 
 	"github.com/taosdata/taoskeeper/api"
@@ -18,16 +17,16 @@ import (
 
 var logger = log.GetLogger("monitor")
 
-func StartMonitor(identity string) {
-	conn, err := db.NewConnector()
+func StartMonitor(identity string, conf *config.Config, reporter *api.Reporter) {
+	conn, err := db.NewConnector(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port)
 	if err != nil {
 		logger.WithError(err).Errorf("connect to database error")
 		panic(err)
 	}
 	var ctx = context.Background()
-	_, err = conn.Exec(ctx, fmt.Sprintf("create database if not exists %s", config.Metrics.Database))
+	_, err = conn.Exec(ctx, fmt.Sprintf("create database if not exists %s", conf.Metrics.Database))
 	if err != nil {
-		logger.WithError(err).Errorf("create database %s error", config.Metrics.Database)
+		logger.WithError(err).Errorf("create database %s error", conf.Metrics.Database)
 		panic(err)
 	}
 	if err := conn.Close(); err != nil {
@@ -42,15 +41,14 @@ func StartMonitor(identity string) {
 		if len(hostname) > 40 {
 			hostname = hostname[:40]
 		}
-		identity = fmt.Sprintf("%s:%d", hostname, config.Conf.Port)
+		identity = fmt.Sprintf("%s:%d", hostname, conf.Port)
 	}
 
 	systemStatus := make(chan SysStatus)
 	_ = pool.GoroutinePool.Submit(func() {
 		var (
-			cpuPercent  float64
-			memPercent  float64
-			totalReport int32
+			cpuPercent float64
+			memPercent float64
 		)
 
 		for status := range systemStatus {
@@ -60,13 +58,13 @@ func StartMonitor(identity string) {
 			if status.MemError == nil {
 				memPercent = status.MemPercent
 			}
-			report := api.TotalRep
-			totalReport = report
-			atomic.CompareAndSwapInt32(&api.TotalRep, report, 0)
+			totalReport := reporter.GetTotalRep().Load()
+			reporter.ResetTotalRep()
 			kn := md5.Sum([]byte(identity))
 			sql := fmt.Sprintf("insert into `keeper_monitor_%s` using keeper_monitor tags ('%s') values ( now, "+
 				" %f, %f, %d)", hex.EncodeToString(kn[:]), identity, cpuPercent, memPercent, totalReport)
-			conn, err := db.NewConnectorWithDb()
+			conn, err := db.NewConnectorWithDb(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host,
+				conf.TDengine.Port, conf.Metrics.Database)
 			if err != nil {
 				logger.WithError(err).Errorf("connect to database error")
 				return
@@ -83,9 +81,9 @@ func StartMonitor(identity string) {
 		}
 	})
 	SysMonitor.Register(systemStatus)
-	interval, err := time.ParseDuration(config.Conf.RotationInterval)
+	interval, err := time.ParseDuration(conf.RotationInterval)
 	if err != nil {
 		panic(err)
 	}
-	Start(interval, config.Conf.Env.InCGroup)
+	Start(interval, conf.Env.InCGroup)
 }

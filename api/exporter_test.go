@@ -21,9 +21,8 @@ var router *gin.Engine
 
 func TestMain(m *testing.M) {
 	var dbName = "exporter_test"
-	config.Init()
-	config.Conf.Metrics.Database = dbName
-	conn, err := db.NewConnector()
+	conf := config.InitConfig()
+	conn, err := db.NewConnector(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port)
 	if err != nil {
 		panic(err)
 	}
@@ -34,9 +33,9 @@ func TestMain(m *testing.M) {
 	}
 	gin.SetMode(gin.ReleaseMode)
 	router = gin.New()
-	report := Report{}
-	report.Init(router)
-	processor := process.NewProcessor()
+	reporter := NewReporter(conf)
+	reporter.Init(router)
+	processor := process.NewProcessor(conf)
 	node := NewNodeExporter(processor)
 	node.Init(router)
 	m.Run()
@@ -205,13 +204,15 @@ var report = Report{
 }
 
 func TestPutMetrics(t *testing.T) {
+	conf := config.InitConfig()
 	w := httptest.NewRecorder()
 	b, _ := json.Marshal(report)
 	body := strings.NewReader(string(b))
 	req, _ := http.NewRequest(http.MethodPost, "/report", body)
 	router.ServeHTTP(w, req)
 	assert.Equal(t, 200, w.Code)
-	conn, err := db.NewConnectorWithDb()
+	conn, err := db.NewConnectorWithDb(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host,
+		conf.TDengine.Port, conf.Metrics.Database)
 	if err != nil {
 		logger.WithError(err).Errorf("connect to database error")
 		return

@@ -40,6 +40,7 @@ type Processor struct {
 	exitChan         chan struct{}
 	dbConn           *db.Connector
 	summaryTable     map[string]*Table
+	tables           map[string]struct{}
 }
 
 func (p *Processor) Describe(descs chan<- *prometheus.Desc) {
@@ -152,29 +153,30 @@ type Value struct {
 	Value interface{}
 }
 
-func NewProcessor() *Processor {
-	conn, err := db.NewConnector()
+func NewProcessor(conf *config.Config) *Processor {
+	conn, err := db.NewConnector(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port)
 	if err != nil {
 		panic(err)
 	}
-	interval, err := time.ParseDuration(config.Conf.RotationInterval)
+	interval, err := time.ParseDuration(conf.RotationInterval)
 	if err != nil {
 		panic(err)
 	}
 	ctx := context.Background()
-	err = ExpandMetricsFromConfig(ctx, conn, config.Metrics)
+	err = ExpandMetricsFromConfig(ctx, conn, &conf.Metrics)
 	if err != nil {
 		panic(err)
 	}
 	p := &Processor{
-		prefix:           config.Metrics.Prefix,
-		db:               config.Metrics.Database,
+		prefix:           conf.Metrics.Prefix,
+		db:               conf.Metrics.Database,
 		metrics:          map[string]*Table{},
 		ctx:              ctx,
 		rotationInterval: interval,
 		exitChan:         make(chan struct{}),
 		dbConn:           conn,
 		summaryTable:     map[string]*Table{"taosadapter_restful_http_request_summary_milliseconds": nil},
+		tables:           conf.Metrics.Tables,
 	}
 	p.Prepare()
 	p.process()
@@ -186,9 +188,9 @@ func NewProcessor() *Processor {
 func (p *Processor) Prepare() {
 	locker := sync.RWMutex{}
 	wg := sync.WaitGroup{}
-	wg.Add(len(config.Metrics.Tables))
+	wg.Add(len(p.tables))
 
-	for tn := range config.Metrics.Tables {
+	for tn := range p.tables {
 		tableName := tn
 
 		err := pool.GoroutinePool.Submit(func() {
@@ -274,15 +276,6 @@ func (p *Processor) Prepare() {
 	}
 
 	wg.Wait()
-}
-
-func (p *Processor) executeSql(sql string) *db.Data {
-	data, err := p.dbConn.Query(p.ctx, sql)
-	if err != nil {
-		logger.WithError(err).Errorf("error occur when : %s", sql)
-		return nil
-	}
-	return data
 }
 
 func (p *Processor) withDBName(tableName string) string {
