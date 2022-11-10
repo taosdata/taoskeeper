@@ -49,7 +49,7 @@ func StartMonitor(identity string, conf *config.Config, reporter *api.Reporter) 
 		var (
 			cpuPercent  float64
 			memPercent  float64
-			totalReport uint32
+			totalReport int
 		)
 
 		for status := range systemStatus {
@@ -62,7 +62,7 @@ func StartMonitor(identity string, conf *config.Config, reporter *api.Reporter) 
 
 			totalResp := reporter.GetTotalRep()
 			for i := 0; i < 3; i++ {
-				totalReport = totalResp.Load()
+				totalReport = totalResp.Load().(int)
 				if totalResp.CompareAndSwap(totalReport, 0) {
 					break
 				}

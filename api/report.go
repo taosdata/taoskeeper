@@ -37,17 +37,19 @@ type Reporter struct {
 	host     string
 	port     int
 	dbname   string
-	totalRep atomic.Uint32
+	totalRep atomic.Value
 }
 
 func NewReporter(conf *config.Config) *Reporter {
-	return &Reporter{
+	r := &Reporter{
 		username: conf.TDengine.Username,
 		password: conf.TDengine.Password,
 		host:     conf.TDengine.Host,
 		port:     conf.TDengine.Port,
 		dbname:   conf.Metrics.Database,
 	}
+	r.totalRep.Store(0)
+	return r
 }
 
 func (r *Reporter) Init(c gin.IRouter) {
@@ -80,7 +82,7 @@ func (r *Reporter) closeConn(conn *db.Connector) {
 
 func (r *Reporter) handlerFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		r.totalRep.Add(1)
+		r.recordTotalRep()
 		// data parse
 		data, err := c.GetRawData()
 		if err != nil {
@@ -120,7 +122,14 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 	}
 }
 
-func (r *Reporter) GetTotalRep() *atomic.Uint32 {
+func (r *Reporter) recordTotalRep() {
+	old := r.totalRep.Load().(int)
+	for i := 0; i < 3; i++ {
+		r.totalRep.CompareAndSwap(old, old+1)
+	}
+}
+
+func (r *Reporter) GetTotalRep() *atomic.Value {
 	return &r.totalRep
 }
 
