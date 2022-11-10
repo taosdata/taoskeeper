@@ -212,7 +212,7 @@ func TestPutMetrics(t *testing.T) {
 	router.ServeHTTP(w, req)
 	assert.Equal(t, 200, w.Code)
 	conn, err := db.NewConnectorWithDb(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host,
-		conf.TDengine.Port, conf.Metrics.Database)
+		conf.TDengine.Port, "exporter_test")
 	if err != nil {
 		logger.WithError(err).Errorf("connect to database error")
 		return
