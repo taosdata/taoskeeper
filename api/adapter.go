@@ -3,7 +3,7 @@ package api
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -21,10 +21,16 @@ type AdapterImporter struct {
 	nextTime     time.Time
 	exitChan     chan struct{}
 	client       *http.Client
+	username     string
+	password     string
+	host         string
+	port         int
+	database     string
+	adapters     []string
 }
 
-func NewAdapterImporter() {
-	interval, err := time.ParseDuration(config.Conf.RotationInterval)
+func NewAdapterImporter(conf *config.Config) {
+	interval, err := time.ParseDuration(conf.RotationInterval)
 	if err != nil {
 		panic(err)
 	}
@@ -45,6 +51,12 @@ func NewAdapterImporter() {
 		pullInterval: interval,
 		exitChan:     make(chan struct{}),
 		client:       client,
+		username:     conf.TDengine.Username,
+		password:     conf.TDengine.Password,
+		host:         conf.TDengine.Host,
+		port:         conf.TDengine.Port,
+		database:     conf.Metrics.Database,
+		adapters:     conf.TaosAdapter.Addrs,
 	}
 	imp.setNextTime(time.Now())
 	go imp.work()
@@ -75,8 +87,7 @@ func (imp *AdapterImporter) setNextTime(t time.Time) {
 }
 
 func (imp *AdapterImporter) queryMetrics() {
-	a := *config.Adapter
-	for _, addr := range a.Addrs {
+	for _, addr := range imp.adapters {
 		urlPath := &url.URL{
 			Scheme: "http",
 			Host:   addr,
@@ -102,13 +113,13 @@ func (imp *AdapterImporter) queryMetrics() {
 			continue
 		}
 		if resp.StatusCode != http.StatusOK {
-			_, err := ioutil.ReadAll(resp.Body)
+			_, err := io.ReadAll(resp.Body)
 			if err != nil {
 				logger.Errorf("query metrics status abnormal %d from: %s, error: %s", resp.StatusCode, addr, err)
 				continue
 			}
 		}
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			logger.Errorf("error reading body: %s", err)
 			continue
@@ -119,13 +130,11 @@ func (imp *AdapterImporter) queryMetrics() {
 }
 
 func (imp *AdapterImporter) lineWriteBody(body []byte, addr string) {
-	tdConfig := config.Conf.TDengine
 	u := &url.URL{
-		Scheme: "http",
-		Host:   fmt.Sprintf("%s:%d", tdConfig.Host, tdConfig.Port),
-		Path:   "/influxdb/v1/write",
-		RawQuery: fmt.Sprintf("u=%s&p=%s&db=%s",
-			tdConfig.Username, tdConfig.Password, config.Metrics.Database),
+		Scheme:   "http",
+		Host:     fmt.Sprintf("%s:%d", imp.host, imp.port),
+		Path:     "/influxdb/v1/write",
+		RawQuery: fmt.Sprintf("u=%s&p=%s&db=%s", imp.username, imp.password, imp.database),
 	}
 	header := map[string][]string{
 		"Connection": {"keep-alive"},
@@ -161,7 +170,7 @@ func (imp *AdapterImporter) lineWriteBody(body []byte, addr string) {
 		}
 		d.Write(data)
 	}
-	req.Body = ioutil.NopCloser(bytes.NewReader(d.Bytes()))
+	req.Body = io.NopCloser(bytes.NewReader(d.Bytes()))
 	resp, err := imp.client.Do(req)
 
 	if err != nil {

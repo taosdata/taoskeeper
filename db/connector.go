@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	_ "github.com/taosdata/driver-go/v3/taosRestful"
-	"github.com/taosdata/taoskeeper/infrastructure/config"
 )
 
 type Connector struct {
@@ -18,19 +17,16 @@ type Data struct {
 	Data [][]interface{} `json:"data"`
 }
 
-func NewConnector() (*Connector, error) {
-	tdConfig := config.Conf.TDengine
-	db, err := sql.Open("taosRestful", fmt.Sprintf("%s:%s@http(%s:%d)/", tdConfig.Username, tdConfig.Password, tdConfig.Host, tdConfig.Port))
+func NewConnector(username, password, host string, port int) (*Connector, error) {
+	db, err := sql.Open("taosRestful", fmt.Sprintf("%s:%s@http(%s:%d)/", username, password, host, port))
 	if err != nil {
 		return nil, err
 	}
 	return &Connector{db: db}, nil
 }
 
-func NewConnectorWithDb() (*Connector, error) {
-	tdConfig := config.Conf.TDengine
-	dbname := config.Conf.Metrics.Database
-	db, err := sql.Open("taosRestful", fmt.Sprintf("%s:%s@http(%s:%d)/%s", tdConfig.Username, tdConfig.Password, tdConfig.Host, tdConfig.Port, dbname))
+func NewConnectorWithDb(username, password, host string, port int, dbname string) (*Connector, error) {
+	db, err := sql.Open("taosRestful", fmt.Sprintf("%s:%s@http(%s:%d)/%s", username, password, host, port, dbname))
 	if err != nil {
 		return nil, err
 	}

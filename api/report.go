@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
 	"github.com/taosdata/go-utils/json"
 	"github.com/taosdata/taoskeeper/db"
+	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
 )
 
@@ -29,18 +31,39 @@ var createList = []string{
 	CreateKeeperSql,
 }
 
-func (r *Report) Init(c gin.IRouter) {
-	c.POST("report", handler)
-	creatTables()
+type Reporter struct {
+	username string
+	password string
+	host     string
+	port     int
+	dbname   string
+	totalRep atomic.Value
 }
 
-func creatTables() {
-	conn, err := db.NewConnectorWithDb()
+func NewReporter(conf *config.Config) *Reporter {
+	r := &Reporter{
+		username: conf.TDengine.Username,
+		password: conf.TDengine.Password,
+		host:     conf.TDengine.Host,
+		port:     conf.TDengine.Port,
+		dbname:   conf.Metrics.Database,
+	}
+	r.totalRep.Store(0)
+	return r
+}
+
+func (r *Reporter) Init(c gin.IRouter) {
+	c.POST("report", r.handlerFunc())
+	r.creatTables()
+}
+
+func (r *Reporter) creatTables() {
+	conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname)
 	if err != nil {
 		logger.WithError(err).Errorf("connect to database error")
 		return
 	}
-	defer closeConn(conn)
+	defer r.closeConn(conn)
 
 	ctx := context.Background()
 	for i := 0; i < len(createList); i++ {
@@ -51,52 +74,63 @@ func creatTables() {
 	}
 }
 
-func closeConn(conn *db.Connector) {
+func (r *Reporter) closeConn(conn *db.Connector) {
 	if err := conn.Close(); err != nil {
 		logger.WithError(err).Errorf("close connection error")
 	}
 }
 
-var TotalRep int32
+func (r *Reporter) handlerFunc() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		r.recordTotalRep()
+		// data parse
+		data, err := c.GetRawData()
+		if err != nil {
+			logger.WithError(err).Errorf("receiving taosd data error")
+			return
+		}
+		var report Report
+		logger.Tracef("report data: %s", string(data))
+		if e := json.Unmarshal(data, &report); e != nil {
+			logger.WithError(e).Errorf("error occurred while unmarshal request data: %s ", data)
+			return
+		}
+		var sqls []string
+		sqls = append(sqls, insertClusterInfoSql(report.ClusterInfo, report.ClusterID, report.Protocol, report.Ts)...)
+		sqls = append(sqls, insertDnodeSql(report.DnodeInfo, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts),
+			insertGrantSql(report.GrantInfo, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts))
+		sqls = append(sqls, insertDataDirSql(report.DiskInfos, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts)...)
+		for _, group := range report.VgroupInfos {
+			sqls = append(sqls, insertVgroupSql(group, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts)...)
+		}
+		sqls = append(sqls, insertLogSql(report.LogInfos, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts)...)
 
-func handler(c *gin.Context) {
-	TotalRep++
-	// data parse
-	data, err := c.GetRawData()
-	if err != nil {
-		logger.WithError(err).Errorf("receiving taosd data error")
-		return
-	}
-	r := Report{}
-	logger.Tracef("report data: %s", string(data))
-	if e := json.Unmarshal(data, &r); e != nil {
-		logger.WithError(e).Errorf("error occurred while unmarshal request data: %s ", data)
-		return
-	}
-	var sqls []string
-	sqls = append(sqls, insertClusterInfoSql(r.ClusterInfo, r.ClusterID, r.Protocol, r.Ts)...)
-	sqls = append(sqls, insertDnodeSql(r.DnodeInfo, r.DnodeID, r.DnodeEp, r.ClusterID, r.Ts),
-		insertGrantSql(r.GrantInfo, r.DnodeID, r.DnodeEp, r.ClusterID, r.Ts))
-	sqls = append(sqls, insertDataDirSql(r.DiskInfos, r.DnodeID, r.DnodeEp, r.ClusterID, r.Ts)...)
-	for _, group := range r.VgroupInfos {
-		sqls = append(sqls, insertVgroupSql(group, r.DnodeID, r.DnodeEp, r.ClusterID, r.Ts)...)
-	}
-	sqls = append(sqls, insertLogSql(r.LogInfos, r.DnodeID, r.DnodeEp, r.ClusterID, r.Ts)...)
+		conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname)
+		if err != nil {
+			logger.WithError(err).Errorf("connect to database error")
+			return
+		}
+		defer r.closeConn(conn)
+		ctx := context.Background()
 
-	conn, err := db.NewConnectorWithDb()
-	if err != nil {
-		logger.WithError(err).Errorf("connect to database error")
-		return
-	}
-	defer closeConn(conn)
-	ctx := context.Background()
-
-	for _, sql := range sqls {
-		logger.Tracef("execute sql %s", sql)
-		if _, err := conn.Exec(ctx, sql); err != nil {
-			logger.WithError(err).Errorf("execute sql : %s", sql)
+		for _, sql := range sqls {
+			logger.Tracef("execute sql %s", sql)
+			if _, err := conn.Exec(ctx, sql); err != nil {
+				logger.WithError(err).Errorf("execute sql : %s", sql)
+			}
 		}
 	}
+}
+
+func (r *Reporter) recordTotalRep() {
+	old := r.totalRep.Load().(int)
+	for i := 0; i < 3; i++ {
+		r.totalRep.CompareAndSwap(old, old+1)
+	}
+}
+
+func (r *Reporter) GetTotalRep() *atomic.Value {
+	return &r.totalRep
 }
 
 func insertClusterInfoSql(info ClusterInfo, ClusterID string, protocol int, ts string) []string {
