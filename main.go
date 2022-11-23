@@ -26,6 +26,7 @@ func main() {
 	monitor.StartMonitor("", conf, reporter)
 	processor := process.NewProcessor(conf)
 	api.NewAdapterImporter(conf)
+	api.NewKafkaImporter(conf)
 	node := api.NewNodeExporter(processor)
 	node.Init(router)
 

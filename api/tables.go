@@ -286,3 +286,52 @@ var CreateKeeperSql = "create table if not exists keeper_monitor (" +
 	"mem float, " +
 	"total_reports int " +
 	") tags (identify nchar(50))"
+
+type KafkaCluster struct {
+	Version   int `json:"version"`
+	Commit    int `json:"commit"`
+	ClusterId int `json:"kafka_cluster_id"`
+}
+
+var KafkaConnectSql = "create table if not exists kafka_connect(" +
+	"ts timestamp, " +
+	"state binary(10), " +
+	"worker_id binary(20), " +
+	"task_num int, " +
+	"type binary(10), " +
+	"topics binary(1000)" +
+	") tags (kafka_cluster_id binary(50), name binary(200))"
+
+type KafkaOverview struct {
+	Status KafkaStatus `json:"status"`
+}
+
+type KafkaStatus struct {
+	Name      string         `json:"name"`
+	Connector KafkaConnector `json:"connector"`
+	Tasks     []KafkaTask    `json:"tasks"`
+	// sink or source
+	Type string `json:"type"`
+}
+
+type KafkaConnector struct {
+	// RUNNING or FAILED
+	State    string `json:"state"`
+	WorkerId string `json:"worker_id"`
+}
+
+var KafkaTaskSql = "create table if not exists kafka_task(" +
+	"ts timestamp, " +
+	"state binary(10), " +
+	"worker_id binary(20)" +
+	") tags (kafka_cluster_id binary(50), name binary(200), id int)"
+
+type KafkaTask struct {
+	Id       int    `json:"id"`
+	State    string `json:"state"`
+	WorkerId string `json:"worker_id"`
+}
+
+type KafkaTopics struct {
+	Topics []string `json:"topics"`
+}

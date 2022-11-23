@@ -24,6 +24,7 @@ type Config struct {
 	TaosAdapter      TaosAdapter
 	Metrics          MetricsConfig
 	Env              Environment
+	Kafka            Kafka
 }
 
 type TDengineRestful struct {
@@ -102,6 +103,10 @@ func InitConfig() *Config {
 	conf.Env = Environment{
 		InCGroup: viper.GetBool("environment.incgroup"),
 	}
+
+	conf.Kafka = Kafka{
+		Url: viper.GetString("kafka.url"),
+	}
 	return conf
 }
 
@@ -161,4 +166,9 @@ func init() {
 	viper.SetDefault("environment.incgroup", false)
 	_ = viper.BindEnv("environment.incgroup", "TAOS_KEEPER_ENVIRONMENT_INCGROUP")
 	pflag.Bool("environment.incgroup", false, `whether running in cgroup. Env "TAOS_KEEPER_ENVIRONMENT_INCGROUP"`)
+
+	viper.SetDefault("kafka.url", "127.0.0.1:8083")
+	_ = viper.BindEnv("kafka.url", "KAFKA_URL")
+	pflag.String("kafka.url", "127.0.0.1:8083", `kafka connect REST API url. Env "KAFKA_URL"`)
+
 }

@@ -22,3 +22,7 @@ type Metric struct {
 type Environment struct {
 	InCGroup bool `toml:"whether running in cgroup"`
 }
+
+type Kafka struct {
+	Url string `toml:"Kafka Connect URL"`
+}
