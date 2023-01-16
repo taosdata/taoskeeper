@@ -54,10 +54,27 @@ func NewReporter(conf *config.Config) *Reporter {
 
 func (r *Reporter) Init(c gin.IRouter) {
 	c.POST("report", r.handlerFunc())
+	r.createDatabase()
 	r.creatTables()
 }
 
+func (r *Reporter) createDatabase() {
+	ctx := context.Background()
+	conn, err := db.NewConnector(r.username, r.password, r.host, r.port)
+	if err != nil {
+		logger.WithError(err).Errorf("connect to database error")
+		panic(err)
+	}
+	defer r.closeConn(conn)
+
+	if _, err = conn.Exec(ctx, fmt.Sprintf("create database if not exists %s", r.dbname)); err != nil {
+		logger.WithError(err).Errorf("create database %s error %v", r.dbname, err)
+		panic(err)
+	}
+}
+
 func (r *Reporter) creatTables() {
+	ctx := context.Background()
 	conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname)
 	if err != nil {
 		logger.WithError(err).Errorf("connect to database error")
@@ -65,7 +82,6 @@ func (r *Reporter) creatTables() {
 	}
 	defer r.closeConn(conn)
 
-	ctx := context.Background()
 	for i := 0; i < len(createList); i++ {
 		logger.Infof("execute sql: %s", createList[i])
 		if _, err = conn.Exec(ctx, createList[i]); err != nil {
