@@ -18,21 +18,6 @@ import (
 var logger = log.GetLogger("monitor")
 
 func StartMonitor(identity string, conf *config.Config, reporter *api.Reporter) {
-	conn, err := db.NewConnector(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port)
-	if err != nil {
-		logger.WithError(err).Errorf("connect to database error")
-		panic(err)
-	}
-	var ctx = context.Background()
-	_, err = conn.Exec(ctx, fmt.Sprintf("create database if not exists %s", conf.Metrics.Database))
-	if err != nil {
-		logger.WithError(err).Errorf("create database %s error", conf.Metrics.Database)
-		panic(err)
-	}
-	if err := conn.Close(); err != nil {
-		logger.WithError(err).Errorf("close connection error")
-	}
-
 	if len(identity) == 0 {
 		hostname, err := os.Hostname()
 		if err != nil {
