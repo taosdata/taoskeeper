@@ -115,9 +115,9 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 		if report.ClusterInfo != nil {
 			sqls = append(sqls, insertClusterInfoSql(*report.ClusterInfo, report.ClusterID, report.Protocol, report.Ts)...)
 		}
+		sqls = append(sqls, insertDnodeSql(report.DnodeInfo, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts))
 		if report.GrantInfo != nil {
-			sqls = append(sqls, insertDnodeSql(report.DnodeInfo, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts),
-				insertGrantSql(*report.GrantInfo, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts))
+			sqls = append(sqls, insertGrantSql(*report.GrantInfo, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts))
 		}
 		sqls = append(sqls, insertDataDirSql(report.DiskInfos, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts)...)
 		for _, group := range report.VgroupInfos {
