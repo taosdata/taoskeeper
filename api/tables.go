@@ -1,8 +1,9 @@
 package api
 
 import (
-	"github.com/shopspring/decimal"
 	"strconv"
+
+	"github.com/shopspring/decimal"
 )
 
 type Report struct {
@@ -11,10 +12,10 @@ type Report struct {
 	DnodeEp     string       `json:"dnode_ep"`
 	ClusterID   string       `json:"cluster_id"`
 	Protocol    int          `json:"protocol"`
-	ClusterInfo ClusterInfo  `json:"cluster_info"`
+	ClusterInfo *ClusterInfo `json:"cluster_info"` // only reported by master
 	StbInfos    []StbInfo    `json:"stb_infos"`
-	VgroupInfos []VgroupInfo `json:"vgroup_infos"`
-	GrantInfo   GrantInfo    `json:"grant_info"`
+	VgroupInfos []VgroupInfo `json:"vgroup_infos"` // only reported by master
+	GrantInfo   *GrantInfo   `json:"grant_info"`   // only reported by master
 	DnodeInfo   DnodeInfo    `json:"dnode_info"`
 	DiskInfos   DiskInfo     `json:"disk_infos"`
 	LogInfos    LogInfo      `json:"log_infos"`
