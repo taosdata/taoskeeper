@@ -1068,6 +1068,7 @@ github.com/gorilla/sessions v1.2.1/go.mod h1:dk2InVEVJ0sfLlnXv9EAgkf6ecYs/i80K/z
 github.com/gorilla/websocket v0.0.0-20170926233335-4201258b820c/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
 github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
+github.com/gorilla/websocket v1.5.0/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/gosnmp/gosnmp v1.34.0/go.mod h1:QWTRprXN9haHFof3P96XTDYc46boCGAh5IXp0DniEx4=
 github.com/gostaticanalysis/analysisutil v0.0.0-20190318220348-4088753ea4d3/go.mod h1:eEOZF4jCKGi+aprrirO9e7WKB3beBRtWgqGunKl6pKE=
 github.com/gostaticanalysis/analysisutil v0.0.3/go.mod h1:eEOZF4jCKGi+aprrirO9e7WKB3beBRtWgqGunKl6pKE=
@@ -1972,6 +1973,8 @@ github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635/go.mod h1:hkRG
 github.com/taosdata/driver-go/v2 v2.0.1-0.20211018081904-0a2a3ef6c829/go.mod h1:W7pu74rSvDmGjJPO6fzp+GCtwOelrMgXEhPD0aQJ1xw=
 github.com/taosdata/driver-go/v3 v3.0.0-20220707070353-31ea371e8aa0 h1:PUTJQqhwwbEu3Eaq1SDFenQEoGnALnEi42wPQocoZhs=
 github.com/taosdata/driver-go/v3 v3.0.0-20220707070353-31ea371e8aa0/go.mod h1:lT4lpI3wo3hXRwP3nzm7xDs/YgYbw5YU58XingVlfsY=
+github.com/taosdata/driver-go/v3 v3.1.0 h1:QhGxmXnHU6tLGuamXdwz2NCX2WbmQ1SBflYreH1TCZ8=
+github.com/taosdata/driver-go/v3 v3.1.0/go.mod h1:H2vo/At+rOPY1aMzUV9P49SVX7NlXb3LAbKw+MCLrmU=
 github.com/taosdata/go-utils v0.0.0-20211022070036-018cc5f2432a h1:WGFREiuYBrTXTS9GVQQpDvVgGRyByfo0V5//o7tv/ho=
 github.com/taosdata/go-utils v0.0.0-20211022070036-018cc5f2432a/go.mod h1:hlvGgM/HN3AqWMajvMQe80qoLNJ4KIxs8YOVqEqnxUo=
 github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62/go.mod h1:qUzPVlSj2UgxJkVbH0ZwuuiR46U8RBMDT5KLY78Ifpw=

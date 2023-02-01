@@ -14,9 +14,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.7.4
-	github.com/taosdata/driver-go/v3 v3.0.0-20220707070353-31ea371e8aa0
+	github.com/taosdata/driver-go/v3 v3.1.0
 	github.com/taosdata/go-utils v0.0.0-20211022070036-018cc5f2432a
-	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
 )
 
 require (
