@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"math"
 	"runtime"
 	"sync"
 	"time"
@@ -33,6 +34,12 @@ func (s *sysMonitor) collect() {
 	s.status.MemPercent, s.status.MemError = s.collector.MemPercent()
 	s.status.GoroutineCounts = runtime.NumGoroutine()
 	s.status.ThreadCounts, _ = runtime.ThreadCreateProfile(nil)
+	// skip when inf or nan
+	if math.IsInf(s.status.CpuPercent, 0) || math.IsNaN(s.status.CpuPercent) ||
+		math.IsInf(s.status.MemPercent, 0) || math.IsNaN(s.status.MemPercent) {
+		return
+	}
+
 	s.Lock()
 	for output := range s.outputs {
 		select {
