@@ -35,8 +35,8 @@ func (s *sysMonitor) collect() {
 	s.status.GoroutineCounts = runtime.NumGoroutine()
 	s.status.ThreadCounts, _ = runtime.ThreadCreateProfile(nil)
 	// skip when inf or nan
-	if s.status.CpuPercent == math.Inf(1) || s.status.CpuPercent == math.Inf(-1) || s.status.CpuPercent == math.NaN() ||
-		s.status.MemPercent == math.Inf(1) || s.status.MemPercent == math.Inf(-1) || s.status.MemPercent == math.NaN() {
+	if math.IsInf(s.status.CpuPercent, 0) || math.IsNaN(s.status.CpuPercent) ||
+		math.IsInf(s.status.MemPercent, 0) || math.IsNaN(s.status.MemPercent) {
 		return
 	}
 
