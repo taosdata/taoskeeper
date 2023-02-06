@@ -57,7 +57,7 @@ var report = Report{
 	DnodeEp:   "localhost:7100",
 	ClusterID: "6980428120398645172",
 	Protocol:  1,
-	ClusterInfo: ClusterInfo{
+	ClusterInfo: &ClusterInfo{
 		FirstEp:          "localhost:7100",
 		FirstEpDnodeID:   1,
 		Version:          "3.0.0.0",
@@ -101,7 +101,7 @@ var report = Report{
 			},
 		},
 	},
-	GrantInfo: GrantInfo{
+	GrantInfo: &GrantInfo{
 		ExpireTime:      2147483647,
 		TimeseriesUsed:  800,
 		TimeseriesTotal: 2147483647,
