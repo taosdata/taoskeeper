@@ -18,6 +18,10 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
 
+      - name: test
+        run:
+          go mod tidy && go test -v ./...
+
       - name: Build
         run: |
           go mod tidy
