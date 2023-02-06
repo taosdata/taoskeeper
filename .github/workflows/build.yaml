@@ -18,6 +18,13 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
 
+      - name: checkout TDengine
+        uses: actions/checkout@v3
+        with:
+          repository: 'taosdata/TDengine'
+          path: 'TDengine'
+          ref: 'main'
+
       - name: install TDengine
         run: |
           cd TDengine
