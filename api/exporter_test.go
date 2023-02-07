@@ -18,10 +18,12 @@ import (
 )
 
 var router *gin.Engine
+var conf *config.Config
+var dbName = "exporter_test"
 
 func TestMain(m *testing.M) {
-	var dbName = "exporter_test"
-	conf := config.InitConfig()
+	conf = config.InitConfig()
+	conf.Metrics.Database = dbName
 	conn, err := db.NewConnector(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port)
 	if err != nil {
 		panic(err)
@@ -57,7 +59,7 @@ var report = Report{
 	DnodeEp:   "localhost:7100",
 	ClusterID: "6980428120398645172",
 	Protocol:  1,
-	ClusterInfo: ClusterInfo{
+	ClusterInfo: &ClusterInfo{
 		FirstEp:          "localhost:7100",
 		FirstEpDnodeID:   1,
 		Version:          "3.0.0.0",
@@ -101,7 +103,7 @@ var report = Report{
 			},
 		},
 	},
-	GrantInfo: GrantInfo{
+	GrantInfo: &GrantInfo{
 		ExpireTime:      2147483647,
 		TimeseriesUsed:  800,
 		TimeseriesTotal: 2147483647,
@@ -204,7 +206,6 @@ var report = Report{
 }
 
 func TestPutMetrics(t *testing.T) {
-	conf := config.InitConfig()
 	w := httptest.NewRecorder()
 	b, _ := json.Marshal(report)
 	body := strings.NewReader(string(b))
@@ -212,7 +213,7 @@ func TestPutMetrics(t *testing.T) {
 	router.ServeHTTP(w, req)
 	assert.Equal(t, 200, w.Code)
 	conn, err := db.NewConnectorWithDb(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host,
-		conf.TDengine.Port, "exporter_test")
+		conf.TDengine.Port, dbName)
 	if err != nil {
 		logger.WithError(err).Errorf("connect to database error")
 		return
@@ -221,6 +222,7 @@ func TestPutMetrics(t *testing.T) {
 	data, err := conn.Query(ctx, "select info from log_summary")
 	if err != nil {
 		logger.Errorf("execute sql: %s, error: %s", "select * from log_summary", err)
+		t.Fatal(err)
 	}
 	for _, info := range data.Data {
 		assert.Equal(t, int32(114), info[0])

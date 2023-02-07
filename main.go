@@ -34,8 +34,11 @@ func main() {
 		Handler: router,
 	}
 	logger := log.GetLogger("main")
+
+	shutdown := make(chan struct{})
 	go func() {
-		quit := make(chan os.Signal)
+		defer close(shutdown)
+		quit := make(chan os.Signal, 1)
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 		<-quit
 
@@ -50,5 +53,6 @@ func main() {
 		panic(fmt.Errorf("taoskeeper start up fail! %v", err))
 	}
 
+	<-shutdown
 	logger.Warn("stop server")
 }

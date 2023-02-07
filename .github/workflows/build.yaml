@@ -12,11 +12,39 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2
-        
+
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go }}
+
+      - name: checkout TDengine
+        uses: actions/checkout@v3
+        with:
+          repository: 'taosdata/TDengine'
+          path: 'TDengine'
+          ref: 'main'
+
+      - name: install TDengine
+        run: |
+          cd TDengine
+          mkdir debug
+          cd debug
+          cmake .. -DBUILD_HTTP=false -DBUILD_JDBC=false -DBUILD_TOOLS=false -DBUILD_TEST=off
+          make -j 32
+          sudo make install
+          which taosd
+          which taosadapter
+
+      - name: start taosd
+        run: nohup sudo taosd &
+
+      - name: start taosadapter
+        run: nohup sudo taosadapter &
+
+      - name: test
+        run:
+          go mod tidy && go test -v ./...
 
       - name: Build
         run: |
