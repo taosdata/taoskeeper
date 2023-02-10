@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/BurntSushi/toml v0.4.1
-	github.com/gin-gonic/gin v1.7.4
+	github.com/gin-gonic/gin v1.7.7
 	github.com/influxdata/telegraf v1.23.3
 	github.com/panjf2000/ants/v2 v2.4.6
 	github.com/prometheus/client_golang v1.12.2
