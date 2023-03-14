@@ -10,7 +10,7 @@ loglevel = "info"
 # go pool size
 gopoolsize = 50000
 
-# interval for TDengine metrics
+# interval for metrics
 RotationInterval = "15s"
 
 [tdengine]
