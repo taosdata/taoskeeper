@@ -269,16 +269,16 @@ var CreateSummarySql = "create table if not exists log_summary(" +
 	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 type GrantInfo struct {
-	ExpireTime      int `json:"expire_time"`
-	TimeseriesUsed  int `json:"timeseries_used"`
-	TimeseriesTotal int `json:"timeseries_total"`
+	ExpireTime      int64 `json:"expire_time"`
+	TimeseriesUsed  int64 `json:"timeseries_used"`
+	TimeseriesTotal int64 `json:"timeseries_total"`
 }
 
 var CreateGrantInfoSql = "create table if not exists grants_info(" +
 	"ts timestamp, " +
-	"expire_time int, " +
-	"timeseries_used int, " +
-	"timeseries_total int " +
+	"expire_time bigint, " +
+	"timeseries_used bigint, " +
+	"timeseries_total bigint " +
 	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 var CreateKeeperSql = "create table if not exists keeper_monitor (" +
