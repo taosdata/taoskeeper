@@ -57,6 +57,7 @@ func (r *Reporter) Init(c gin.IRouter) {
 	c.POST("report", r.handlerFunc())
 	r.createDatabase()
 	r.creatTables()
+	r.detectGrantInfoFieldType()
 }
 
 func (r *Reporter) detectGrantInfoFieldType() {
