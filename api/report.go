@@ -32,12 +32,13 @@ var createList = []string{
 }
 
 type Reporter struct {
-	username string
-	password string
-	host     string
-	port     int
-	dbname   string
-	totalRep atomic.Value
+	username            string
+	password            string
+	host                string
+	port                int
+	dbname              string
+	totalRep            atomic.Value
+	grantsInfoDataToInt bool
 }
 
 func NewReporter(conf *config.Config) *Reporter {
@@ -56,6 +57,37 @@ func (r *Reporter) Init(c gin.IRouter) {
 	c.POST("report", r.handlerFunc())
 	r.createDatabase()
 	r.creatTables()
+}
+
+func (r *Reporter) detectGrantInfoFieldType() {
+	// `expire_time` `timeseries_used` `timeseries_total` in table `grant_info` changed to bigint from TS-2932.
+	// so it need to detect this field's type
+	ctx := context.Background()
+	conn, err := db.NewConnector(r.username, r.password, r.host, r.port)
+	if err != nil {
+		logger.WithError(err).Error("connect to database error")
+		panic(err)
+	}
+	defer r.closeConn(conn)
+
+	res, err := conn.Query(ctx,
+		fmt.Sprintf("select col_type from information_schema.ins_columns where table_name='grants_info' and db_name='%s' and col_name='expire_time'", r.dbname))
+	if err != nil {
+		logger.WithError(err).Error("get grantInfo field type error")
+	}
+
+	if len(res.Data) == 0 {
+		return
+	}
+
+	if len(res.Data) != 1 && len(res.Data[0]) != 1 {
+		logger.Error("get grantInfo field type error. response is ", res)
+	}
+
+	colType := res.Data[0][0].(string)
+	if colType == "INT" {
+		r.grantsInfoDataToInt = true
+	}
 }
 
 func (r *Reporter) createDatabase() {
@@ -117,7 +149,8 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 		}
 		sqls = append(sqls, insertDnodeSql(report.DnodeInfo, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts))
 		if report.GrantInfo != nil {
-			sqls = append(sqls, insertGrantSql(*report.GrantInfo, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts))
+			sqls = append(sqls, insertGrantSql(r.grantsInfoDataToInt, *report.GrantInfo, report.DnodeID, report.DnodeEp,
+				report.ClusterID, report.Ts))
 		}
 		sqls = append(sqls, insertDataDirSql(report.DiskInfos, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts)...)
 		for _, group := range report.VgroupInfos {
@@ -247,7 +280,12 @@ func insertLogSql(log LogInfo, DnodeID int, DnodeEp string, ClusterID string, ts
 	return sqls
 }
 
-func insertGrantSql(g GrantInfo, DnodeID int, DnodeEp string, ClusterID string, ts string) string {
+func insertGrantSql(toInt bool, g GrantInfo, DnodeID int, DnodeEp string, ClusterID string, ts string) string {
+	if toInt {
+		return fmt.Sprintf("insert into grants_info_%s using grants_info tags (%d, '%s', '%s') values ('%s', %d, %d, %d)",
+			ClusterID+strconv.Itoa(DnodeID), DnodeID, DnodeEp, ClusterID,
+			ts, int(g.ExpireTime), int(g.TimeseriesUsed), int(g.TimeseriesTotal))
+	}
 	return fmt.Sprintf("insert into grants_info_%s using grants_info tags (%d, '%s', '%s') values ('%s', %d, %d, %d)",
 		ClusterID+strconv.Itoa(DnodeID), DnodeID, DnodeEp, ClusterID,
 		ts, g.ExpireTime, g.TimeseriesUsed, g.TimeseriesTotal)
