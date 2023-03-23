@@ -75,6 +75,7 @@ func (r *Reporter) detectGrantInfoFieldType() {
 		fmt.Sprintf("select col_type from information_schema.ins_columns where table_name='grants_info' and db_name='%s' and col_name='expire_time'", r.dbname))
 	if err != nil {
 		logger.WithError(err).Error("get grantInfo field type error")
+		panic(err)
 	}
 
 	if len(res.Data) == 0 {
@@ -83,6 +84,7 @@ func (r *Reporter) detectGrantInfoFieldType() {
 
 	if len(res.Data) != 1 && len(res.Data[0]) != 1 {
 		logger.Error("get grantInfo field type error. response is ", res)
+		panic(fmt.Sprint("get grantInfo field type error. response is ", res))
 	}
 
 	colType := res.Data[0][0].(string)
