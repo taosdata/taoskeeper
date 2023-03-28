@@ -28,7 +28,7 @@ type ClusterInfo struct {
 	MasterUptime     float32 `json:"master_uptime"`
 	MonitorInterval  int     `json:"monitor_interval"`
 	DbsTotal         int     `json:"dbs_total"`
-	TbsTotal         int     `json:"tbs_total"`
+	TbsTotal         int64   `json:"tbs_total"` // change to bigint since TS-3003
 	StbsTotal        int     `json:"stbs_total"`
 	VgroupsTotal     int     `json:"vgroups_total"`
 	VgroupsAlive     int     `json:"vgroups_alive"`
@@ -49,7 +49,7 @@ var CreateClusterInfoSql = "create table if not exists cluster_info (" +
 	"master_uptime float, " +
 	"monitor_interval int, " +
 	"dbs_total int, " +
-	"tbs_total int, " +
+	"tbs_total bigint, " + // change to bigint since TS-3003
 	"stbs_total int, " +
 	"dnodes_total int, " +
 	"dnodes_alive int, " +
@@ -215,7 +215,7 @@ type StbInfo struct {
 type VgroupInfo struct {
 	VgroupID     int     `json:"vgroup_id"`
 	DatabaseName string  `json:"database_name"`
-	TablesNum    int     `json:"tables_num"`
+	TablesNum    int64   `json:"tables_num"`
 	Status       string  `json:"status"`
 	Vnodes       []Vnode `json:"vnodes"`
 }
@@ -224,7 +224,7 @@ var CreateVgroupsInfoSql = "create table if not exists vgroups_info (" +
 	"ts timestamp, " +
 	"vgroup_id int, " +
 	"database_name binary(33), " +
-	"tables_num int, " +
+	"tables_num bigint, " + // change to bigint since TS-3003
 	"status binary(512) " +
 	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
