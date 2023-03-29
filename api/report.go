@@ -245,7 +245,11 @@ func insertClusterInfoSql(info ClusterInfo, ClusterID string, protocol int, ts s
 		}
 	}
 
-	sqls = append(sqls, fmt.Sprintf("insert into cluster_info_%s using cluster_info tags('%s') values ('%s', '%s', %d, '%s', %f, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)",
+	sqls = append(sqls, fmt.Sprintf(
+		"insert into cluster_info_%s using cluster_info tags('%s') (ts, first_ep, first_ep_dnode_id, version, "+
+			"master_uptime, monitor_interval, dbs_total, tbs_total, stbs_total, dnodes_total, dnodes_alive, mnodes_total, "+
+			"mnodes_alive, vgroups_total, vgroups_alive, vnodes_total, vnodes_alive, connections_total, protocol) "+
+			"values ('%s', '%s', %d, '%s', %f, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)",
 		ClusterID, ClusterID, ts, info.FirstEp, info.FirstEpDnodeID, info.Version, info.MasterUptime, info.MonitorInterval, info.DbsTotal, info.TbsTotal, info.StbsTotal,
 		dtotal, dalive, mtotal, malive, info.VgroupsTotal, info.VgroupsAlive, info.VnodesTotal, info.VnodesAlive, info.ConnectionsTotal, protocol))
 	return sqls
@@ -283,7 +287,8 @@ func insertDataDirSql(disk DiskInfo, DnodeID int, DnodeEp string, ClusterID stri
 
 func insertVgroupSql(g VgroupInfo, DnodeID int, DnodeEp string, ClusterID string, ts string) []string {
 	var sqls []string
-	sqls = append(sqls, fmt.Sprintf("insert into vgroups_info_%s using vgroups_info tags (%d, '%s', '%s') values ( '%s','%d', '%s', %d, '%s')",
+	sqls = append(sqls, fmt.Sprintf("insert into vgroups_info_%s using vgroups_info tags (%d, '%s', '%s') "+
+		"(ts, vgroup_id, database_name, tables_num, status, ) values ( '%s','%d', '%s', %d, '%s')",
 		ClusterID+strconv.Itoa(DnodeID), DnodeID, DnodeEp, ClusterID,
 		ts, g.VgroupID, g.DatabaseName, g.TablesNum, g.Status))
 	for _, v := range g.Vnodes {
@@ -318,7 +323,7 @@ func insertLogSql(log LogInfo, DnodeID int, DnodeEp string, ClusterID string, ts
 }
 
 func insertGrantSql(g GrantInfo, DnodeID int, DnodeEp string, ClusterID string, ts string) string {
-	return fmt.Sprintf("insert into grants_info_%s using grants_info tags (%d, '%s', '%s') values ('%s', %d, %d, %d)",
-		ClusterID+strconv.Itoa(DnodeID), DnodeID, DnodeEp, ClusterID,
-		ts, g.ExpireTime, g.TimeseriesUsed, g.TimeseriesTotal)
+	return fmt.Sprintf("insert into grants_info_%s using grants_info tags (%d, '%s', '%s') (ts, expire_time, "+
+		"timeseries_used, timeseries_total) values ('%s', %d, %d, %d)", ClusterID+strconv.Itoa(DnodeID), DnodeID,
+		DnodeEp, ClusterID, ts, g.ExpireTime, g.TimeseriesUsed, g.TimeseriesTotal)
 }
