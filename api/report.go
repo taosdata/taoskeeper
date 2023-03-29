@@ -56,10 +56,10 @@ func (r *Reporter) Init(c gin.IRouter) {
 	c.POST("report", r.handlerFunc())
 	r.createDatabase()
 	r.creatTables()
-	// todo: it can delete in future.
+	// todo: it can delete in the future.
 	r.detectGrantInfoFieldType()
 	r.detectClusterInfoFieldType()
-	r.detectVgroupsInfo()
+	r.detectVgroupsInfoType()
 }
 
 func (r *Reporter) getConn() *db.Connector {
@@ -91,7 +91,7 @@ func (r *Reporter) detectClusterInfoFieldType() {
 	r.detectFieldType(ctx, conn, "cluster_info", "tbs_total", "bigint")
 }
 
-func (r *Reporter) detectVgroupsInfo() {
+func (r *Reporter) detectVgroupsInfoType() {
 	// `tables_num` in table `vgroups_info` changed to bigint from TS-3003.
 	ctx := context.Background()
 	conn := r.getConn()
@@ -118,6 +118,7 @@ func (r *Reporter) detectFieldType(ctx context.Context, conn *db.Connector, tabl
 
 	colType := res.Data[0][0].(string)
 	if colType == "INT" {
+		logger.Warningf("## %s.%s.%s type is %s, will change to %s", r.dbname, table, field, colType, fieldType)
 		// drop column `tables_num`
 		if _, err = conn.Exec(ctx, fmt.Sprintf("alter table %s.%s drop column %s", r.dbname, table, field)); err != nil {
 			logger.WithError(err).Errorf("drop column %s error", field)
