@@ -96,8 +96,11 @@ func InitConfig() *Config {
 	conf.Metrics = MetricsConfig{
 		Prefix:   viper.GetString("metrics.prefix"),
 		Database: viper.GetString("metrics.database"),
-		Tables:   map[string]struct{}{},
-		Normals:  viper.GetStringSlice("metrics.tables"),
+		DatabaseOptions: DatabaseOptions{
+			CacheModel: viper.GetString("metrics.databaseoptions.cachemodel"),
+		},
+		Tables:  map[string]struct{}{},
+		Normals: viper.GetStringSlice("metrics.tables"),
 	}
 	conf.Env = Environment{
 		InCGroup: viper.GetBool("environment.incgroup"),
@@ -153,6 +156,10 @@ func init() {
 	viper.SetDefault("metrics.database", "log")
 	_ = viper.BindEnv("metrics.database", "TAOS_KEEPER_METRICS_DATABASE")
 	pflag.String("metrics.database", "log", `database for storing metrics data. Env "TAOS_KEEPER_METRICS_DATABASE"`)
+
+	viper.SetDefault("metrics.databaseoptions.cacheModel", "none")
+	_ = viper.BindEnv("metrics.databaseoptions.cacheModel", "TAOS_KEEPER_METRICS_DATABASEOPTIONS_CACHEMODEL")
+	pflag.String("metrics.databaseoptions.cacheModel", "none", `cache model for database. Env "TAOS_KEEPER_METRICS_DATABASEOPTIONS_CACHEMODEL"`)
 
 	viper.SetDefault("metrics.tables", "")
 	_ = viper.BindEnv("metrics.tables", "TAOS_KEEPER_METRICS_TABLES")

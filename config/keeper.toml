@@ -33,6 +33,9 @@ database = "log"
 # export some tables that are not super table
 tables = []
 
+[metrics.databaseoptions]
+cachemodel = "none"
+
 [environment]
 # Whether running in cgroup.
 incgroup = false
