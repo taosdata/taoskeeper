@@ -33,6 +33,7 @@ database = "log"
 # export some tables that are not super table
 tables = []
 
+# database options for db storing metrics data
 [metrics.databaseoptions]
 cachemodel = "none"
 

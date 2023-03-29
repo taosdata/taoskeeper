@@ -73,39 +73,16 @@ func InitConfig() *Config {
 		}
 	}
 
-	conf := &Config{
-		Debug:            viper.GetBool("debug"),
-		Port:             viper.GetInt("port"),
-		LogLevel:         viper.GetString("logLevel"),
-		GoPoolSize:       viper.GetInt("gopoolsize"),
-		RotationInterval: viper.GetString("RotationInterval"),
+	var conf Config
+	if err = viper.Unmarshal(&conf); err != nil {
+		panic(err)
 	}
+
 	conf.Cors.Init()
 	pool.Init(conf.GoPoolSize)
 	log.Init(conf.LogLevel)
-	conf.TDengine = TDengineRestful{
-		Host:     viper.GetString("tdengine.host"),
-		Port:     viper.GetInt("tdengine.port"),
-		Username: viper.GetString("tdengine.username"),
-		Password: viper.GetString("tdengine.password"),
-	}
-	conf.TaosAdapter = TaosAdapter{
-		Addrs: viper.GetStringSlice("taosAdapter.address"),
-	}
 
-	conf.Metrics = MetricsConfig{
-		Prefix:   viper.GetString("metrics.prefix"),
-		Database: viper.GetString("metrics.database"),
-		DatabaseOptions: DatabaseOptions{
-			CacheModel: viper.GetString("metrics.databaseoptions.cachemodel"),
-		},
-		Tables:  map[string]struct{}{},
-		Normals: viper.GetStringSlice("metrics.tables"),
-	}
-	conf.Env = Environment{
-		InCGroup: viper.GetBool("environment.incgroup"),
-	}
-	return conf
+	return &conf
 }
 
 func init() {
@@ -156,10 +133,6 @@ func init() {
 	viper.SetDefault("metrics.database", "log")
 	_ = viper.BindEnv("metrics.database", "TAOS_KEEPER_METRICS_DATABASE")
 	pflag.String("metrics.database", "log", `database for storing metrics data. Env "TAOS_KEEPER_METRICS_DATABASE"`)
-
-	viper.SetDefault("metrics.databaseoptions.cacheModel", "none")
-	_ = viper.BindEnv("metrics.databaseoptions.cacheModel", "TAOS_KEEPER_METRICS_DATABASEOPTIONS_CACHEMODEL")
-	pflag.String("metrics.databaseoptions.cacheModel", "none", `cache model for database. Env "TAOS_KEEPER_METRICS_DATABASEOPTIONS_CACHEMODEL"`)
 
 	viper.SetDefault("metrics.tables", "")
 	_ = viper.BindEnv("metrics.tables", "TAOS_KEEPER_METRICS_TABLES")

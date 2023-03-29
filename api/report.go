@@ -38,7 +38,7 @@ type Reporter struct {
 	host            string
 	port            int
 	dbname          string
-	databaseOptions config.DatabaseOptions
+	databaseOptions map[string]interface{}
 	totalRep        atomic.Value
 }
 
@@ -155,9 +155,16 @@ func (r *Reporter) generateCreateDBSql() string {
 	buf.WriteString("create database if not exists ")
 	buf.WriteString(r.dbname)
 
-	if r.databaseOptions.CacheModel != "" && r.databaseOptions.CacheModel != "none" && r.databaseOptions.CacheModel != "NONE" {
-		buf.WriteString(" CACHEMODEL ")
-		buf.WriteString(r.databaseOptions.CacheModel)
+	for k, v := range r.databaseOptions {
+		buf.WriteString(" ")
+		buf.WriteString(k)
+		switch v := v.(type) {
+		case string:
+			buf.WriteString(fmt.Sprintf(" '%s'", v))
+		default:
+			buf.WriteString(fmt.Sprintf(" %v", v))
+		}
+		buf.WriteString(" ")
 	}
 	return buf.String()
 }

@@ -1,9 +1,9 @@
 package config
 
 type MetricsConfig struct {
-	Prefix          string          `toml:"prefix"`
-	Database        string          `toml:"database"`
-	DatabaseOptions DatabaseOptions `toml:"databaseoptions"`
+	Prefix          string                 `toml:"prefix"`
+	Database        string                 `toml:"database"`
+	DatabaseOptions map[string]interface{} `toml:"databaseoptions"`
 	Tables          map[string]struct{}
 	Normals         []string `toml:"tables"`
 }
@@ -22,8 +22,4 @@ type Metric struct {
 
 type Environment struct {
 	InCGroup bool `toml:"whether running in cgroup"`
-}
-
-type DatabaseOptions struct {
-	CacheModel string `toml:"cachemodel"`
 }
