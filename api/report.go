@@ -32,13 +32,12 @@ var createList = []string{
 }
 
 type Reporter struct {
-	username            string
-	password            string
-	host                string
-	port                int
-	dbname              string
-	totalRep            atomic.Value
-	grantsInfoDataToInt bool
+	username string
+	password string
+	host     string
+	port     int
+	dbname   string
+	totalRep atomic.Value
 }
 
 func NewReporter(conf *config.Config) *Reporter {
@@ -57,24 +56,54 @@ func (r *Reporter) Init(c gin.IRouter) {
 	c.POST("report", r.handlerFunc())
 	r.createDatabase()
 	r.creatTables()
+	// todo: it can delete in the future.
 	r.detectGrantInfoFieldType()
+	r.detectClusterInfoFieldType()
+	r.detectVgroupsInfoType()
 }
 
-func (r *Reporter) detectGrantInfoFieldType() {
-	// `expire_time` `timeseries_used` `timeseries_total` in table `grant_info` changed to bigint from TS-2932.
-	// so it need to detect this field's type
-	ctx := context.Background()
+func (r *Reporter) getConn() *db.Connector {
 	conn, err := db.NewConnector(r.username, r.password, r.host, r.port)
 	if err != nil {
 		logger.WithError(err).Error("connect to database error")
 		panic(err)
 	}
+	return conn
+}
+
+func (r *Reporter) detectGrantInfoFieldType() {
+	// `expire_time` `timeseries_used` `timeseries_total` in table `grant_info` changed to bigint from TS-3003.
+	ctx := context.Background()
+	conn := r.getConn()
 	defer r.closeConn(conn)
 
-	res, err := conn.Query(ctx,
-		fmt.Sprintf("select col_type from information_schema.ins_columns where table_name='grants_info' and db_name='%s' and col_name='expire_time'", r.dbname))
+	r.detectFieldType(ctx, conn, "grants_info", "expire_time", "bigint")
+	r.detectFieldType(ctx, conn, "grants_info", "timeseries_used", "bigint")
+	r.detectFieldType(ctx, conn, "grants_info", "timeseries_total", "bigint")
+}
+
+func (r *Reporter) detectClusterInfoFieldType() {
+	// `tbs_total` in table `cluster_info` changed to bigint from TS-3003.
+	ctx := context.Background()
+	conn := r.getConn()
+	defer r.closeConn(conn)
+
+	r.detectFieldType(ctx, conn, "cluster_info", "tbs_total", "bigint")
+}
+
+func (r *Reporter) detectVgroupsInfoType() {
+	// `tables_num` in table `vgroups_info` changed to bigint from TS-3003.
+	ctx := context.Background()
+	conn := r.getConn()
+	defer r.closeConn(conn)
+
+	r.detectFieldType(ctx, conn, "vgroups_info", "tables_num", "bigint")
+}
+
+func (r *Reporter) detectFieldType(ctx context.Context, conn *db.Connector, table, field, fieldType string) {
+	res, err := conn.Query(ctx, fmt.Sprintf("select col_type from information_schema.ins_columns where table_name='%s' and db_name='%s' and col_name='%s'", table, r.dbname, field))
 	if err != nil {
-		logger.WithError(err).Error("get grantInfo field type error")
+		logger.WithError(err).Errorf("get %s field type error", r.dbname)
 		panic(err)
 	}
 
@@ -83,26 +112,33 @@ func (r *Reporter) detectGrantInfoFieldType() {
 	}
 
 	if len(res.Data) != 1 && len(res.Data[0]) != 1 {
-		logger.Error("get grantInfo field type error. response is ", res)
-		panic(fmt.Sprint("get grantInfo field type error. response is ", res))
+		logger.Errorf("get field type for %s error. response is %+v", table, res)
+		panic(fmt.Sprintf("get field type for %s error. response is %+v", table, res))
 	}
 
 	colType := res.Data[0][0].(string)
 	if colType == "INT" {
-		r.grantsInfoDataToInt = true
+		logger.Warningf("## %s.%s.%s type is %s, will change to %s", r.dbname, table, field, colType, fieldType)
+		// drop column `tables_num`
+		if _, err = conn.Exec(ctx, fmt.Sprintf("alter table %s.%s drop column %s", r.dbname, table, field)); err != nil {
+			logger.WithError(err).Errorf("drop column %s error", field)
+			panic(err)
+		}
+
+		// add column `tables_num`
+		if _, err = conn.Exec(ctx, fmt.Sprintf("alter table %s.%s add column %s %s", r.dbname, table, field, fieldType)); err != nil {
+			logger.WithError(err).Errorf("add column %s error", field)
+			panic(err)
+		}
 	}
 }
 
 func (r *Reporter) createDatabase() {
 	ctx := context.Background()
-	conn, err := db.NewConnector(r.username, r.password, r.host, r.port)
-	if err != nil {
-		logger.WithError(err).Errorf("connect to database error")
-		panic(err)
-	}
+	conn := r.getConn()
 	defer r.closeConn(conn)
 
-	if _, err = conn.Exec(ctx, fmt.Sprintf("create database if not exists %s", r.dbname)); err != nil {
+	if _, err := conn.Exec(ctx, fmt.Sprintf("create database if not exists %s", r.dbname)); err != nil {
 		logger.WithError(err).Errorf("create database %s error %v", r.dbname, err)
 		panic(err)
 	}
@@ -117,10 +153,10 @@ func (r *Reporter) creatTables() {
 	}
 	defer r.closeConn(conn)
 
-	for i := 0; i < len(createList); i++ {
-		logger.Infof("execute sql: %s", createList[i])
-		if _, err = conn.Exec(ctx, createList[i]); err != nil {
-			logger.Errorf("execute sql: %s, error: %s", createList[i], err)
+	for _, createSql := range createList {
+		logger.Infof("execute sql: %s", createSql)
+		if _, err = conn.Exec(ctx, createSql); err != nil {
+			logger.Errorf("execute sql: %s, error: %s", createSql, err)
 		}
 	}
 }
@@ -152,8 +188,7 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 		}
 		sqls = append(sqls, insertDnodeSql(report.DnodeInfo, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts))
 		if report.GrantInfo != nil {
-			sqls = append(sqls, insertGrantSql(r.grantsInfoDataToInt, *report.GrantInfo, report.DnodeID, report.DnodeEp,
-				report.ClusterID, report.Ts))
+			sqls = append(sqls, insertGrantSql(*report.GrantInfo, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts))
 		}
 		sqls = append(sqls, insertDataDirSql(report.DiskInfos, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts)...)
 		for _, group := range report.VgroupInfos {
@@ -211,7 +246,11 @@ func insertClusterInfoSql(info ClusterInfo, ClusterID string, protocol int, ts s
 		}
 	}
 
-	sqls = append(sqls, fmt.Sprintf("insert into cluster_info_%s using cluster_info tags('%s') values ('%s', '%s', %d, '%s', %f, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)",
+	sqls = append(sqls, fmt.Sprintf(
+		"insert into cluster_info_%s using cluster_info tags('%s') (ts, first_ep, first_ep_dnode_id, version, "+
+			"master_uptime, monitor_interval, dbs_total, tbs_total, stbs_total, dnodes_total, dnodes_alive, mnodes_total, "+
+			"mnodes_alive, vgroups_total, vgroups_alive, vnodes_total, vnodes_alive, connections_total, protocol) "+
+			"values ('%s', '%s', %d, '%s', %f, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)",
 		ClusterID, ClusterID, ts, info.FirstEp, info.FirstEpDnodeID, info.Version, info.MasterUptime, info.MonitorInterval, info.DbsTotal, info.TbsTotal, info.StbsTotal,
 		dtotal, dalive, mtotal, malive, info.VgroupsTotal, info.VgroupsAlive, info.VnodesTotal, info.VnodesAlive, info.ConnectionsTotal, protocol))
 	return sqls
@@ -249,7 +288,8 @@ func insertDataDirSql(disk DiskInfo, DnodeID int, DnodeEp string, ClusterID stri
 
 func insertVgroupSql(g VgroupInfo, DnodeID int, DnodeEp string, ClusterID string, ts string) []string {
 	var sqls []string
-	sqls = append(sqls, fmt.Sprintf("insert into vgroups_info_%s using vgroups_info tags (%d, '%s', '%s') values ( '%s','%d', '%s', %d, '%s')",
+	sqls = append(sqls, fmt.Sprintf("insert into vgroups_info_%s using vgroups_info tags (%d, '%s', '%s') "+
+		"(ts, vgroup_id, database_name, tables_num, status, ) values ( '%s','%d', '%s', %d, '%s')",
 		ClusterID+strconv.Itoa(DnodeID), DnodeID, DnodeEp, ClusterID,
 		ts, g.VgroupID, g.DatabaseName, g.TablesNum, g.Status))
 	for _, v := range g.Vnodes {
@@ -283,13 +323,8 @@ func insertLogSql(log LogInfo, DnodeID int, DnodeEp string, ClusterID string, ts
 	return sqls
 }
 
-func insertGrantSql(toInt bool, g GrantInfo, DnodeID int, DnodeEp string, ClusterID string, ts string) string {
-	if toInt {
-		return fmt.Sprintf("insert into grants_info_%s using grants_info tags (%d, '%s', '%s') values ('%s', %d, %d, %d)",
-			ClusterID+strconv.Itoa(DnodeID), DnodeID, DnodeEp, ClusterID,
-			ts, int(g.ExpireTime), int(g.TimeseriesUsed), int(g.TimeseriesTotal))
-	}
-	return fmt.Sprintf("insert into grants_info_%s using grants_info tags (%d, '%s', '%s') values ('%s', %d, %d, %d)",
-		ClusterID+strconv.Itoa(DnodeID), DnodeID, DnodeEp, ClusterID,
-		ts, g.ExpireTime, g.TimeseriesUsed, g.TimeseriesTotal)
+func insertGrantSql(g GrantInfo, DnodeID int, DnodeEp string, ClusterID string, ts string) string {
+	return fmt.Sprintf("insert into grants_info_%s using grants_info tags (%d, '%s', '%s') (ts, expire_time, "+
+		"timeseries_used, timeseries_total) values ('%s', %d, %d, %d)", ClusterID+strconv.Itoa(DnodeID), DnodeID,
+		DnodeEp, ClusterID, ts, g.ExpireTime, g.TimeseriesUsed, g.TimeseriesTotal)
 }
