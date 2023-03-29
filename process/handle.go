@@ -176,7 +176,7 @@ func NewProcessor(conf *config.Config) *Processor {
 		exitChan:         make(chan struct{}),
 		dbConn:           conn,
 		summaryTable:     map[string]*Table{"taosadapter_restful_http_request_summary_milliseconds": nil},
-		tables:           conf.Metrics.Tables,
+		tables:           conf.Metrics.TableMap,
 	}
 	p.Prepare()
 	p.process()

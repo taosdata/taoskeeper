@@ -13,15 +13,15 @@ var builderLogger = log.GetLogger("builder")
 
 func ExpandMetricsFromConfig(ctx context.Context, conn *db.Connector, cfg *config.MetricsConfig) error {
 
-	for _, name := range cfg.Normals {
+	for _, name := range cfg.Tables {
 		builderLogger.Debug("normal table: ", name)
 
-		_, exist := cfg.Tables[name]
+		_, exist := cfg.TableMap[name]
 		if exist {
 			builderLogger.Debug(name, "is exist in config")
 			continue
 		}
-		cfg.Tables[name] = struct{}{}
+		cfg.TableMap[name] = struct{}{}
 	}
 
 	data, err := conn.Query(ctx, fmt.Sprintf("show %s.stables", cfg.Database))
@@ -34,12 +34,12 @@ func ExpandMetricsFromConfig(ctx context.Context, conn *db.Connector, cfg *confi
 		name := info[0].(string)
 		builderLogger.Debug("stable: ", info)
 
-		_, exist := cfg.Tables[name]
+		_, exist := cfg.TableMap[name]
 		if exist {
 			builderLogger.Debug(name, "is exist in config")
 			continue
 		}
-		cfg.Tables[name] = struct{}{}
+		cfg.TableMap[name] = struct{}{}
 	}
 	return err
 }

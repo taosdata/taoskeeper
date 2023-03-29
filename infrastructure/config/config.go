@@ -134,9 +134,9 @@ func init() {
 	_ = viper.BindEnv("metrics.database", "TAOS_KEEPER_METRICS_DATABASE")
 	pflag.String("metrics.database", "log", `database for storing metrics data. Env "TAOS_KEEPER_METRICS_DATABASE"`)
 
-	viper.SetDefault("metrics.tables", "")
+	viper.SetDefault("metrics.tables", []string{})
 	_ = viper.BindEnv("metrics.tables", "TAOS_KEEPER_METRICS_TABLES")
-	pflag.String("metrics.tables", "", `export some tables that are not super table, multiple values split with white space. Env "TAOS_KEEPER_METRICS_TABLES"`)
+	pflag.StringArray("metrics.tables", []string{}, `export some tables that are not super table, multiple values split with white space. Env "TAOS_KEEPER_METRICS_TABLES"`)
 
 	viper.SetDefault("environment.incgroup", false)
 	_ = viper.BindEnv("environment.incgroup", "TAOS_KEEPER_ENVIRONMENT_INCGROUP")
