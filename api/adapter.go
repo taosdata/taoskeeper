@@ -124,6 +124,8 @@ func (imp *AdapterImporter) queryMetrics() {
 			logger.Errorf("error reading body: %s", err)
 			continue
 		}
+
+		logger.Debug("## adapter metrics: ", string(body))
 		imp.lineWriteBody(body, addr)
 		_ = resp.Body.Close()
 	}

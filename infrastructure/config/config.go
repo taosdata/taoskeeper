@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -76,6 +77,10 @@ func InitConfig() *Config {
 	var conf Config
 	if err = viper.Unmarshal(&conf); err != nil {
 		panic(err)
+	}
+	if conf.Debug {
+		j, _ := json.Marshal(conf)
+		fmt.Println("config file:", string(j))
 	}
 
 	conf.Cors.Init()
