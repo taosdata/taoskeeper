@@ -1,14 +1,14 @@
 package config
 
 type MetricsConfig struct {
-	Prefix   string `toml:"prefix"`
-	Database string `toml:"database"`
-	Tables   map[string]struct{}
-	Normals  []string `toml:"tables"`
+	Prefix          string                 `toml:"prefix"`
+	Database        string                 `toml:"database"`
+	Tables          []string               `toml:"tables"`
+	DatabaseOptions map[string]interface{} `toml:"databaseoptions"`
 }
 
 type TaosAdapter struct {
-	Addrs []string `toml:"address"`
+	Address []string `toml:"address"`
 }
 
 type Metric struct {
@@ -20,5 +20,5 @@ type Metric struct {
 }
 
 type Environment struct {
-	InCGroup bool `toml:"whether running in cgroup"`
+	InCGroup bool `toml:"incgroup"`
 }

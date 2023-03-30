@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -14,23 +15,23 @@ import (
 )
 
 type Config struct {
-	Cors             web.CorsConfig
-	Debug            bool
-	Port             int
-	LogLevel         string
-	GoPoolSize       int
-	RotationInterval string
-	TDengine         TDengineRestful
-	TaosAdapter      TaosAdapter
-	Metrics          MetricsConfig
-	Env              Environment
+	Cors             web.CorsConfig  `toml:"cors"`
+	Debug            bool            `toml:"debug"`
+	Port             int             `toml:"port"`
+	LogLevel         string          `toml:"loglevel"`
+	GoPoolSize       int             `toml:"gopoolsize"`
+	RotationInterval string          `toml:"RotationInterval"`
+	TDengine         TDengineRestful `toml:"tdengine"`
+	TaosAdapter      TaosAdapter     `toml:"taosAdapter"`
+	Metrics          MetricsConfig   `toml:"metrics"`
+	Env              Environment     `toml:"environment"`
 }
 
 type TDengineRestful struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
+	Host     string `toml:"host"`
+	Port     int    `toml:"port"`
+	Username string `toml:"username"`
+	Password string `toml:"password"`
 }
 
 func InitConfig() *Config {
@@ -73,36 +74,20 @@ func InitConfig() *Config {
 		}
 	}
 
-	conf := &Config{
-		Debug:            viper.GetBool("debug"),
-		Port:             viper.GetInt("port"),
-		LogLevel:         viper.GetString("logLevel"),
-		GoPoolSize:       viper.GetInt("gopoolsize"),
-		RotationInterval: viper.GetString("RotationInterval"),
+	var conf Config
+	if err = viper.Unmarshal(&conf); err != nil {
+		panic(err)
 	}
+	if conf.Debug {
+		j, _ := json.Marshal(conf)
+		fmt.Println("config file:", string(j))
+	}
+
 	conf.Cors.Init()
 	pool.Init(conf.GoPoolSize)
 	log.Init(conf.LogLevel)
-	conf.TDengine = TDengineRestful{
-		Host:     viper.GetString("tdengine.host"),
-		Port:     viper.GetInt("tdengine.port"),
-		Username: viper.GetString("tdengine.username"),
-		Password: viper.GetString("tdengine.password"),
-	}
-	conf.TaosAdapter = TaosAdapter{
-		Addrs: viper.GetStringSlice("taosAdapter.address"),
-	}
 
-	conf.Metrics = MetricsConfig{
-		Prefix:   viper.GetString("metrics.prefix"),
-		Database: viper.GetString("metrics.database"),
-		Tables:   map[string]struct{}{},
-		Normals:  viper.GetStringSlice("metrics.tables"),
-	}
-	conf.Env = Environment{
-		InCGroup: viper.GetBool("environment.incgroup"),
-	}
-	return conf
+	return &conf
 }
 
 func init() {
@@ -154,9 +139,9 @@ func init() {
 	_ = viper.BindEnv("metrics.database", "TAOS_KEEPER_METRICS_DATABASE")
 	pflag.String("metrics.database", "log", `database for storing metrics data. Env "TAOS_KEEPER_METRICS_DATABASE"`)
 
-	viper.SetDefault("metrics.tables", "")
+	viper.SetDefault("metrics.tables", []string{})
 	_ = viper.BindEnv("metrics.tables", "TAOS_KEEPER_METRICS_TABLES")
-	pflag.String("metrics.tables", "", `export some tables that are not super table, multiple values split with white space. Env "TAOS_KEEPER_METRICS_TABLES"`)
+	pflag.StringArray("metrics.tables", []string{}, `export some tables that are not super table, multiple values split with white space. Env "TAOS_KEEPER_METRICS_TABLES"`)
 
 	viper.SetDefault("environment.incgroup", false)
 	_ = viper.BindEnv("environment.incgroup", "TAOS_KEEPER_ENVIRONMENT_INCGROUP")

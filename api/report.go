@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strconv"
@@ -32,21 +33,23 @@ var createList = []string{
 }
 
 type Reporter struct {
-	username string
-	password string
-	host     string
-	port     int
-	dbname   string
-	totalRep atomic.Value
+	username        string
+	password        string
+	host            string
+	port            int
+	dbname          string
+	databaseOptions map[string]interface{}
+	totalRep        atomic.Value
 }
 
 func NewReporter(conf *config.Config) *Reporter {
 	r := &Reporter{
-		username: conf.TDengine.Username,
-		password: conf.TDengine.Password,
-		host:     conf.TDengine.Host,
-		port:     conf.TDengine.Port,
-		dbname:   conf.Metrics.Database,
+		username:        conf.TDengine.Username,
+		password:        conf.TDengine.Password,
+		host:            conf.TDengine.Host,
+		port:            conf.TDengine.Port,
+		dbname:          conf.Metrics.Database,
+		databaseOptions: conf.Metrics.DatabaseOptions,
 	}
 	r.totalRep.Store(0)
 	return r
@@ -138,10 +141,32 @@ func (r *Reporter) createDatabase() {
 	conn := r.getConn()
 	defer r.closeConn(conn)
 
-	if _, err := conn.Exec(ctx, fmt.Sprintf("create database if not exists %s", r.dbname)); err != nil {
+	createDBSql := r.generateCreateDBSql()
+	logger.Warningf("create database sql: %s", createDBSql)
+
+	if _, err := conn.Exec(ctx, createDBSql); err != nil {
 		logger.WithError(err).Errorf("create database %s error %v", r.dbname, err)
 		panic(err)
 	}
+}
+
+func (r *Reporter) generateCreateDBSql() string {
+	var buf bytes.Buffer
+	buf.WriteString("create database if not exists ")
+	buf.WriteString(r.dbname)
+
+	for k, v := range r.databaseOptions {
+		buf.WriteString(" ")
+		buf.WriteString(k)
+		switch v := v.(type) {
+		case string:
+			buf.WriteString(fmt.Sprintf(" '%s'", v))
+		default:
+			buf.WriteString(fmt.Sprintf(" %v", v))
+		}
+		buf.WriteString(" ")
+	}
+	return buf.String()
 }
 
 func (r *Reporter) creatTables() {
