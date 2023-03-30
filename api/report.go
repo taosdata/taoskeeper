@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
@@ -92,6 +93,16 @@ func (r *Reporter) detectClusterInfoFieldType() {
 	defer r.closeConn(conn)
 
 	r.detectFieldType(ctx, conn, "cluster_info", "tbs_total", "bigint")
+
+	// add column `topics_total` and `streams_total` from TD-22032
+	if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "topics_total"); !exists {
+		logger.Warningf("## %s.cluster_info.topics_total not exists, will add it", r.dbname)
+		r.addColumn(ctx, conn, "cluster_info", "topics_total", "int")
+	}
+	if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "streams_total"); !exists {
+		logger.Warningf("## %s.cluster_info.streams_total not exists, will add it", r.dbname)
+		r.addColumn(ctx, conn, "cluster_info", "streams_total", "int")
+	}
 }
 
 func (r *Reporter) detectVgroupsInfoType() {
@@ -104,6 +115,18 @@ func (r *Reporter) detectVgroupsInfoType() {
 }
 
 func (r *Reporter) detectFieldType(ctx context.Context, conn *db.Connector, table, field, fieldType string) {
+	_, colType := r.columnInfo(ctx, conn, table, field)
+	if colType == "INT" {
+		logger.Warningf("## %s.%s.%s type is %s, will change to %s", r.dbname, table, field, colType, fieldType)
+		// drop column `tables_num`
+		r.dropColumn(ctx, conn, table, field)
+
+		// add column `tables_num`
+		r.addColumn(ctx, conn, table, field, fieldType)
+	}
+}
+
+func (r *Reporter) columnInfo(ctx context.Context, conn *db.Connector, table string, field string) (exists bool, colType string) {
 	res, err := conn.Query(ctx, fmt.Sprintf("select col_type from information_schema.ins_columns where table_name='%s' and db_name='%s' and col_name='%s'", table, r.dbname, field))
 	if err != nil {
 		logger.WithError(err).Errorf("get %s field type error", r.dbname)
@@ -119,20 +142,23 @@ func (r *Reporter) detectFieldType(ctx context.Context, conn *db.Connector, tabl
 		panic(fmt.Sprintf("get field type for %s error. response is %+v", table, res))
 	}
 
-	colType := res.Data[0][0].(string)
-	if colType == "INT" {
-		logger.Warningf("## %s.%s.%s type is %s, will change to %s", r.dbname, table, field, colType, fieldType)
-		// drop column `tables_num`
-		if _, err = conn.Exec(ctx, fmt.Sprintf("alter table %s.%s drop column %s", r.dbname, table, field)); err != nil {
-			logger.WithError(err).Errorf("drop column %s error", field)
-			panic(err)
-		}
+	exists = true
+	colType = res.Data[0][0].(string)
+	colType = strings.ToUpper(colType)
+	return
+}
 
-		// add column `tables_num`
-		if _, err = conn.Exec(ctx, fmt.Sprintf("alter table %s.%s add column %s %s", r.dbname, table, field, fieldType)); err != nil {
-			logger.WithError(err).Errorf("add column %s error", field)
-			panic(err)
-		}
+func (r *Reporter) dropColumn(ctx context.Context, conn *db.Connector, table string, field string) {
+	if _, err := conn.Exec(ctx, fmt.Sprintf("alter table %s.%s drop column %s", r.dbname, table, field)); err != nil {
+		logger.WithError(err).Errorf("drop column %s from table %s error", field, table)
+		panic(err)
+	}
+}
+
+func (r *Reporter) addColumn(ctx context.Context, conn *db.Connector, table string, field string, fieldType string) {
+	if _, err := conn.Exec(ctx, fmt.Sprintf("alter table %s.%s add column %s %s", r.dbname, table, field, fieldType)); err != nil {
+		logger.WithError(err).Errorf("add column %s to table %s error", field, table)
+		panic(err)
 	}
 }
 
@@ -273,11 +299,13 @@ func insertClusterInfoSql(info ClusterInfo, ClusterID string, protocol int, ts s
 
 	sqls = append(sqls, fmt.Sprintf(
 		"insert into cluster_info_%s using cluster_info tags('%s') (ts, first_ep, first_ep_dnode_id, version, "+
-			"master_uptime, monitor_interval, dbs_total, tbs_total, stbs_total, dnodes_total, dnodes_alive, mnodes_total, "+
-			"mnodes_alive, vgroups_total, vgroups_alive, vnodes_total, vnodes_alive, connections_total, protocol) "+
-			"values ('%s', '%s', %d, '%s', %f, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)",
-		ClusterID, ClusterID, ts, info.FirstEp, info.FirstEpDnodeID, info.Version, info.MasterUptime, info.MonitorInterval, info.DbsTotal, info.TbsTotal, info.StbsTotal,
-		dtotal, dalive, mtotal, malive, info.VgroupsTotal, info.VgroupsAlive, info.VnodesTotal, info.VnodesAlive, info.ConnectionsTotal, protocol))
+			"master_uptime, monitor_interval, dbs_total, tbs_total, stbs_total, dnodes_total, dnodes_alive, "+
+			"mnodes_total, mnodes_alive, vgroups_total, vgroups_alive, vnodes_total, vnodes_alive, connections_total, "+
+			"topics_total, streams_total, protocol) values ('%s', '%s', %d, '%s', %f, %d, %d, %d, %d, %d, %d, %d, %d, "+
+			"%d, %d, %d, %d, %d, %d, %d, %d)",
+		ClusterID, ClusterID, ts, info.FirstEp, info.FirstEpDnodeID, info.Version, info.MasterUptime, info.MonitorInterval,
+		info.DbsTotal, info.TbsTotal, info.StbsTotal, dtotal, dalive, mtotal, malive, info.VgroupsTotal, info.VgroupsAlive,
+		info.VnodesTotal, info.VnodesAlive, info.ConnectionsTotal, info.TopicsTotal, info.StreamsTotal, protocol))
 	return sqls
 }
 
