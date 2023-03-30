@@ -14,23 +14,23 @@ import (
 )
 
 type Config struct {
-	Cors             web.CorsConfig
-	Debug            bool
-	Port             int
-	LogLevel         string
-	GoPoolSize       int
-	RotationInterval string
-	TDengine         TDengineRestful
-	TaosAdapter      TaosAdapter
-	Metrics          MetricsConfig
-	Env              Environment
+	Cors             web.CorsConfig  `toml:"cors"`
+	Debug            bool            `toml:"debug"`
+	Port             int             `toml:"port"`
+	LogLevel         string          `toml:"loglevel"`
+	GoPoolSize       int             `toml:"gopoolsize"`
+	RotationInterval string          `toml:"RotationInterval"`
+	TDengine         TDengineRestful `toml:"tdengine"`
+	TaosAdapter      TaosAdapter     `toml:"taosAdapter"`
+	Metrics          MetricsConfig   `toml:"metrics"`
+	Env              Environment     `toml:"environment"`
 }
 
 type TDengineRestful struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
+	Host     string `toml:"host"`
+	Port     int    `toml:"port"`
+	Username string `toml:"username"`
+	Password string `toml:"password"`
 }
 
 func InitConfig() *Config {
