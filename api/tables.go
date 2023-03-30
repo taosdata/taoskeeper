@@ -35,6 +35,8 @@ type ClusterInfo struct {
 	VnodesTotal      int     `json:"vnodes_total"`
 	VnodesAlive      int     `json:"vnodes_alive"`
 	ConnectionsTotal int     `json:"connections_total"`
+	TopicsTotal      int     `json:"topics_total"`
+	StreamsTotal     int     `json:"streams_total"`
 	Dnodes           []Dnode `json:"dnodes"`
 	Mnodes           []Mnode `json:"mnodes"`
 }
@@ -60,6 +62,8 @@ var CreateClusterInfoSql = "create table if not exists cluster_info (" +
 	"vnodes_total int, " +
 	"vnodes_alive int, " +
 	"connections_total int, " +
+	"topics_total int, " +
+	"streams_total int, " +
 	"protocol int " +
 	") tags (cluster_id nchar(32))"
 
