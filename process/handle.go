@@ -163,7 +163,7 @@ func NewProcessor(conf *config.Config) *Processor {
 		panic(err)
 	}
 	ctx := context.Background()
-	err = ExpandMetricsFromConfig(ctx, conn, &conf.Metrics)
+	tables, err := ExpandMetricsFromConfig(ctx, conn, &conf.Metrics)
 	if err != nil {
 		panic(err)
 	}
@@ -176,7 +176,7 @@ func NewProcessor(conf *config.Config) *Processor {
 		exitChan:         make(chan struct{}),
 		dbConn:           conn,
 		summaryTable:     map[string]*Table{"taosadapter_restful_http_request_summary_milliseconds": nil},
-		tables:           conf.Metrics.TableMap,
+		tables:           tables,
 	}
 	p.Prepare()
 	p.process()
