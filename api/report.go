@@ -396,7 +396,7 @@ func insertVgroupSql(g VgroupInfo, DnodeID int, DnodeEp string, ClusterID string
 	var sqls []string
 	sqls = append(sqls, fmt.Sprintf("insert into vgroups_info_%s using vgroups_info tags (%d, '%s', '%s') "+
 		"(ts, vgroup_id, database_name, tables_num, status, ) values ( '%s','%d', '%s', %d, '%s')",
-		ClusterID+strconv.Itoa(DnodeID), DnodeID, DnodeEp, ClusterID,
+		ClusterID+strconv.Itoa(DnodeID)+strconv.Itoa(g.VgroupID), DnodeID, DnodeEp, ClusterID,
 		ts, g.VgroupID, g.DatabaseName, g.TablesNum, g.Status))
 	for _, v := range g.Vnodes {
 		sqls = append(sqls, fmt.Sprintf("insert into vnodes_role_%s using vnodes_role tags (%d, '%s', '%s') values ('%s', '%s')",
