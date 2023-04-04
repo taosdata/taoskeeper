@@ -165,12 +165,12 @@ func (r *Reporter) serverVersion(ctx context.Context, conn *db.Connector) (versi
 	}
 
 	if len(res.Data) == 0 {
-		logger.Error("get server version error. response is %+v", res)
+		logger.Errorf("get server version error. response is %+v", res)
 		return
 	}
 
 	if len(res.Data) != 1 && len(res.Data[0]) != 1 {
-		logger.Error("get server version error. response is %+v", res)
+		logger.Errorf("get server version error. response is %+v", res)
 		return
 	}
 
