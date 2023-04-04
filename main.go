@@ -28,6 +28,8 @@ func main() {
 	api.NewAdapterImporter(conf)
 	node := api.NewNodeExporter(processor)
 	node.Init(router)
+	checkHealth := api.NewCheckHealth()
+	checkHealth.Init(router)
 
 	server := &http.Server{
 		Addr:    ":" + strconv.Itoa(conf.Port),

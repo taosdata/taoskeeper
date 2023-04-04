@@ -28,13 +28,15 @@ type ClusterInfo struct {
 	MasterUptime     float32 `json:"master_uptime"`
 	MonitorInterval  int     `json:"monitor_interval"`
 	DbsTotal         int     `json:"dbs_total"`
-	TbsTotal         int     `json:"tbs_total"`
+	TbsTotal         int64   `json:"tbs_total"` // change to bigint since TS-3003
 	StbsTotal        int     `json:"stbs_total"`
 	VgroupsTotal     int     `json:"vgroups_total"`
 	VgroupsAlive     int     `json:"vgroups_alive"`
 	VnodesTotal      int     `json:"vnodes_total"`
 	VnodesAlive      int     `json:"vnodes_alive"`
 	ConnectionsTotal int     `json:"connections_total"`
+	TopicsTotal      int     `json:"topics_total"`
+	StreamsTotal     int     `json:"streams_total"`
 	Dnodes           []Dnode `json:"dnodes"`
 	Mnodes           []Mnode `json:"mnodes"`
 }
@@ -49,7 +51,7 @@ var CreateClusterInfoSql = "create table if not exists cluster_info (" +
 	"master_uptime float, " +
 	"monitor_interval int, " +
 	"dbs_total int, " +
-	"tbs_total int, " +
+	"tbs_total bigint, " + // change to bigint since TS-3003
 	"stbs_total int, " +
 	"dnodes_total int, " +
 	"dnodes_alive int, " +
@@ -60,6 +62,8 @@ var CreateClusterInfoSql = "create table if not exists cluster_info (" +
 	"vnodes_total int, " +
 	"vnodes_alive int, " +
 	"connections_total int, " +
+	"topics_total int, " +
+	"streams_total int, " +
 	"protocol int " +
 	") tags (cluster_id nchar(32))"
 
@@ -215,7 +219,7 @@ type StbInfo struct {
 type VgroupInfo struct {
 	VgroupID     int     `json:"vgroup_id"`
 	DatabaseName string  `json:"database_name"`
-	TablesNum    int     `json:"tables_num"`
+	TablesNum    int64   `json:"tables_num"`
 	Status       string  `json:"status"`
 	Vnodes       []Vnode `json:"vnodes"`
 }
@@ -224,7 +228,7 @@ var CreateVgroupsInfoSql = "create table if not exists vgroups_info (" +
 	"ts timestamp, " +
 	"vgroup_id int, " +
 	"database_name binary(33), " +
-	"tables_num int, " +
+	"tables_num bigint, " + // change to bigint since TS-3003
 	"status binary(512) " +
 	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
@@ -269,16 +273,16 @@ var CreateSummarySql = "create table if not exists log_summary(" +
 	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 type GrantInfo struct {
-	ExpireTime      int `json:"expire_time"`
-	TimeseriesUsed  int `json:"timeseries_used"`
-	TimeseriesTotal int `json:"timeseries_total"`
+	ExpireTime      int64 `json:"expire_time"`
+	TimeseriesUsed  int64 `json:"timeseries_used"`
+	TimeseriesTotal int64 `json:"timeseries_total"`
 }
 
 var CreateGrantInfoSql = "create table if not exists grants_info(" +
 	"ts timestamp, " +
-	"expire_time int, " +
-	"timeseries_used int, " +
-	"timeseries_total int " +
+	"expire_time bigint, " +
+	"timeseries_used bigint, " +
+	"timeseries_total bigint " +
 	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 var CreateKeeperSql = "create table if not exists keeper_monitor (" +

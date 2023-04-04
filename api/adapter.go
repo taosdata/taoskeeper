@@ -56,7 +56,7 @@ func NewAdapterImporter(conf *config.Config) {
 		host:         conf.TDengine.Host,
 		port:         conf.TDengine.Port,
 		database:     conf.Metrics.Database,
-		adapters:     conf.TaosAdapter.Addrs,
+		adapters:     conf.TaosAdapter.Address,
 	}
 	imp.setNextTime(time.Now())
 	go imp.work()
@@ -124,6 +124,8 @@ func (imp *AdapterImporter) queryMetrics() {
 			logger.Errorf("error reading body: %s", err)
 			continue
 		}
+
+		logger.Debug("## adapter metrics: ", string(body))
 		imp.lineWriteBody(body, addr)
 		_ = resp.Body.Close()
 	}
