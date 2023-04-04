@@ -1,5 +1,5 @@
 [Unit]
-Description=TaosKeeper - TDengine Metrics Exporter for Kinds of Collectors
+Description=TaosKeeper - Metrics Exporter for Kinds of Collectors
 Documentation=https://www.taosdata.com
 After=network-online.target
 Wants=network-online.target
