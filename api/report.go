@@ -61,9 +61,11 @@ func (r *Reporter) Init(c gin.IRouter) {
 	r.createDatabase()
 	r.creatTables()
 	// todo: it can delete in the future.
-	r.detectGrantInfoFieldType()
-	r.detectClusterInfoFieldType()
-	r.detectVgroupsInfoType()
+	if r.shouldDetectFields() {
+		r.detectGrantInfoFieldType()
+		r.detectClusterInfoFieldType()
+		r.detectVgroupsInfoType()
+	}
 }
 
 func (r *Reporter) getConn() *db.Connector {
@@ -124,6 +126,57 @@ func (r *Reporter) detectFieldType(ctx context.Context, conn *db.Connector, tabl
 		// add column `tables_num`
 		r.addColumn(ctx, conn, table, field, fieldType)
 	}
+}
+
+func (r *Reporter) shouldDetectFields() bool {
+	ctx := context.Background()
+	conn := r.getConn()
+	defer r.closeConn(conn)
+
+	version, err := r.serverVersion(ctx, conn)
+	if err != nil {
+		logger.Errorf("get server version error: %s", err)
+		return false
+	}
+
+	// if server version is less than v3.0.3.0, should not detect fields.
+	versions := strings.Split(version, ".")
+	if len(versions) < 4 {
+		logger.Errorf("get server version error. version is: %s", version)
+		return false
+	}
+
+	v1, _ := strconv.Atoi(versions[0])
+	v2, _ := strconv.Atoi(versions[1])
+	v3, _ := strconv.Atoi(versions[2])
+
+	if v1 > 3 || v2 > 0 || v3 >= 3 {
+		return true
+	}
+
+	return false
+}
+
+func (r *Reporter) serverVersion(ctx context.Context, conn *db.Connector) (version string, err error) {
+	res, err := conn.Query(ctx, "select server_version()")
+	if err != nil {
+		logger.WithError(err).Error("get server version error")
+		return
+	}
+
+	if len(res.Data) == 0 {
+		logger.Errorf("get server version error. response is %+v", res)
+		return
+	}
+
+	if len(res.Data) != 1 && len(res.Data[0]) != 1 {
+		logger.Errorf("get server version error. response is %+v", res)
+		return
+	}
+
+	version = res.Data[0][0].(string)
+
+	return
 }
 
 func (r *Reporter) columnInfo(ctx context.Context, conn *db.Connector, table string, field string) (exists bool, colType string) {
