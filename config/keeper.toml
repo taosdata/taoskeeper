@@ -19,7 +19,7 @@ port = 6041
 username = "root"
 password = "taosdata"
 
-# list of taosAdapter that need to be monitored
+# list of adapter that need to be monitored
 [taosAdapter]
 address = ["127.0.0.1:6041"]
 
