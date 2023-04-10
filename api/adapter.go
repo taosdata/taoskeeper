@@ -136,7 +136,7 @@ func (imp *AdapterImporter) lineWriteBody(body []byte, addr string) {
 		Scheme:   "http",
 		Host:     fmt.Sprintf("%s:%d", imp.host, imp.port),
 		Path:     "/influxdb/v1/write",
-		RawQuery: fmt.Sprintf("u=%s&p=%s&db=%s", imp.username, imp.password, imp.database),
+		RawQuery: fmt.Sprintf("db=%s", imp.database),
 	}
 	header := map[string][]string{
 		"Connection": {"keep-alive"},
@@ -150,6 +150,7 @@ func (imp *AdapterImporter) lineWriteBody(body []byte, addr string) {
 		Header:     header,
 		Host:       u.Host,
 	}
+	req.SetBasicAuth(imp.username, imp.password)
 
 	metrics, err := prometheus.Parse(body, nil, false)
 	if err != nil {
