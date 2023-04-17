@@ -74,7 +74,7 @@ ReadConfig:
 
 			if !gotoStep {
 				fmt.Println("use keeper.toml instead")
-				viper.SetConfigName("keeper1")
+				viper.SetConfigName("keeper")
 				gotoStep = true
 				goto ReadConfig
 			}
