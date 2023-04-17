@@ -36,7 +36,7 @@ type TDengineRestful struct {
 
 func InitConfig() *Config {
 	viper.SetConfigType("toml")
-	viper.SetConfigName("keeper")
+	viper.SetConfigName("taoskeeper")
 	viper.AddConfigPath("/etc/taos")
 
 	cp := pflag.StringP("c", "c", "", "taoskeeper config file")
@@ -66,9 +66,18 @@ func InitConfig() *Config {
 	}
 	viper.AutomaticEnv()
 
+	gotoStep := false
+ReadConfig:
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			fmt.Println("config file not found")
+
+			if !gotoStep {
+				fmt.Println("use keeper.toml instead")
+				viper.SetConfigName("keeper1")
+				gotoStep = true
+				goto ReadConfig
+			}
 		} else {
 			panic(err)
 		}
