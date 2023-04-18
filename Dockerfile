@@ -10,7 +10,7 @@ RUN go mod tidy && go build
 FROM alpine:3
 RUN mkdir -p /etc/taos
 COPY --from=builder /usr/src/taoskeeper/taoskeeper /usr/bin/
-COPY ./config/keeper.toml /etc/taos/keeper.toml
-RUN chmod u+rw /etc/taos/keeper.toml
+COPY ./config/taoskeeper.toml /etc/taos/taoskeeper.toml
+RUN chmod u+rw /etc/taos/taoskeeper.toml
 EXPOSE 6043
 CMD ["taoskeeper"]

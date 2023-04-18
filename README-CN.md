@@ -35,7 +35,7 @@ sudo install taoskeeper /usr/bin/
 ## 启动
 
 在启动前，应该做好如下配置：
-在 `/etc/taos/keeper.toml` 配置 TDengine 连接参数以及监控指标前缀等其他信息。
+在 `/etc/taos/taoskeeper.toml` 配置 TDengine 连接参数以及监控指标前缀等其他信息。
 
 ```toml
 # gin 框架是否启用 debug
@@ -115,7 +115,7 @@ sudo systemctl enable taoskeeper
 
 如下介绍了如何在 docker 中构建 taosKeeper： 
 
-在构建前请配置好 `./config/keeper.toml`。
+在构建前请配置好 `./config/taoskeeper.toml`。
 
 ```dockerfile
 FROM golang:1.17.6-alpine as builder
@@ -129,18 +129,18 @@ RUN go mod tidy && go build
 FROM alpine:3
 RUN mkdir -p /etc/taos
 COPY --from=builder /usr/src/taoskeeper/taoskeeper /usr/bin/
-COPY ./config/keeper.toml /etc/taos/keeper.toml
+COPY ./config/taoskeeper.toml /etc/taos/taoskeeper.toml
 EXPOSE 6043
 CMD ["taoskeeper"]
 ```
 
-如果已经有 taosKeeper 可执行文件，在配置好 `keeper.toml` 后你可以使用如下方式构建:
+如果已经有 taosKeeper 可执行文件，在配置好 `taoskeeper.toml` 后你可以使用如下方式构建:
 
 ```dockerfile
 FROM ubuntu:18.04
 RUN mkdir -p /etc/taos
 COPY ./taoskeeper /usr/bin/
-COPY ./keeper.toml /etc/taos/keeper.toml
+COPY ./taoskeeper.toml /etc/taos/taoskeeper.toml
 EXPOSE 6043
 CMD ["taoskeeper"]
 ```
@@ -149,7 +149,7 @@ CMD ["taoskeeper"]
 
 * 启动报错，显示connection refused
 
-  **解析**：taosKeeper 依赖 restful 接口查询数据，请检查 taosAdapter 是否正常运行或 keeper.toml 中 taosAdapter 地址是否正确。
+  **解析**：taosKeeper 依赖 restful 接口查询数据，请检查 taosAdapter 是否正常运行或 taoskeeper.toml 中 taosAdapter 地址是否正确。
 
 * taosKeeper 监控不同 TDengine 显示的检测指标数目不一致？
 

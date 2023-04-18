@@ -32,7 +32,7 @@ sudo install taoskeeper /usr/bin/
 
 Before start, you should configure some options like database IP, port or the prefix and others for exported metrics.
 
-in `/etc/taos/keeper.toml`.
+in `/etc/taos/taoskeeper.toml`.
 
 ```toml
 # Start with debug middleware for gin
@@ -111,7 +111,7 @@ sudo systemctl enable taoskeeper
 
 Here is an example to show how to build this tool in docker:
 
-Before building, you should configure `./config/keeper.toml`.
+Before building, you should configure `./config/taoskeeper.toml`.
 
 ```dockerfile
 FROM golang:1.17.2 as builder
@@ -125,7 +125,7 @@ RUN go mod tidy && go build
 FROM alpine:3
 RUN mkdir -p /etc/taos
 COPY --from=builder /usr/src/taoskeeper/taoskeeper /usr/bin/
-COPY ./config/keeper.toml /etc/taos/keeper.toml
+COPY ./config/taoskeeper.toml /etc/taos/taoskeeper.toml
 EXPOSE 6043
 CMD ["taoskeeper"]
 ```
@@ -136,7 +136,7 @@ If you already have taosKeeper binary file, you can build this tool like:
 FROM ubuntu:18.04
 RUN mkdir -p /etc/taos
 COPY ./taoskeeper /usr/bin/
-COPY ./keeper.toml /etc/taos/keeper.toml
+COPY ./taoskeeper.toml /etc/taos/taoskeeper.toml
 EXPOSE 6043
 CMD ["taoskeeper"]
 ```
@@ -146,7 +146,7 @@ CMD ["taoskeeper"]
 * Error occurred: Connection refused, while taosKeeper was starting
 
   **Answer**: taoskeeper relies on restful interfaces to query data. Check whether the taosAdapter is running or whether
-  the taosAdapter address in keeper.toml is correct.
+  the taosAdapter address in taoskeeper.toml is correct.
 
 * Why detection metrics displayed by different TDengine's inconsistent with taoskeeper monitoring?
 
