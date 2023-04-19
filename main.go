@@ -16,6 +16,7 @@ import (
 	"github.com/taosdata/taoskeeper/infrastructure/log"
 	"github.com/taosdata/taoskeeper/monitor"
 	"github.com/taosdata/taoskeeper/process"
+	"github.com/taosdata/taoskeeper/version"
 )
 
 func main() {
@@ -28,7 +29,7 @@ func main() {
 	api.NewAdapterImporter(conf)
 	node := api.NewNodeExporter(processor)
 	node.Init(router)
-	checkHealth := api.NewCheckHealth()
+	checkHealth := api.NewCheckHealth(version.Version)
 	checkHealth.Init(router)
 
 	server := &http.Server{

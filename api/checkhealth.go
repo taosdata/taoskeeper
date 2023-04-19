@@ -4,18 +4,18 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/taosdata/taoskeeper/version"
 )
 
-func NewCheckHealth() *CheckHealth {
-	return &CheckHealth{}
+func NewCheckHealth(version string) *CheckHealth {
+	return &CheckHealth{version: version}
 }
 
 type CheckHealth struct {
+	version string
 }
 
-func (*CheckHealth) Init(c gin.IRouter) {
+func (h *CheckHealth) Init(c gin.IRouter) {
 	c.GET("check_health", func(context *gin.Context) {
-		context.JSON(http.StatusOK, map[string]string{"version": version.Version})
+		context.JSON(http.StatusOK, map[string]string{"version": h.version})
 	})
 }
