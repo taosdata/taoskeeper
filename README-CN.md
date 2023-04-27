@@ -115,7 +115,7 @@ sudo systemctl enable taoskeeper
 
 如下介绍了如何在 docker 中构建 taosKeeper： 
 
-在构建前请配置好 `./config/taoskeeper.toml`。
+在构建前请配置好 `./config/taoskeeper.toml` 中合适的参数，并编辑 Dockerfile ，示例如下。
 
 ```dockerfile
 FROM golang:1.17.6-alpine as builder

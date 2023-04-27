@@ -111,7 +111,7 @@ sudo systemctl enable taoskeeper
 
 Here is an example to show how to build this tool in docker:
 
-Before building, you should configure `./config/taoskeeper.toml`.
+Before building, you should configure `./config/taoskeeper.toml` with proper parameters and edit Dockerfile. Take following as example.
 
 ```dockerfile
 FROM golang:1.17.2 as builder
