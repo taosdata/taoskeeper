@@ -14,6 +14,8 @@ import (
 	"github.com/taosdata/go-utils/web"
 )
 
+var Name = "taoskeeper"
+
 type Config struct {
 	Cors             web.CorsConfig  `toml:"cors"`
 	Debug            bool            `toml:"debug"`
@@ -36,7 +38,7 @@ type TDengineRestful struct {
 
 func InitConfig() *Config {
 	viper.SetConfigType("toml")
-	viper.SetConfigName("taoskeeper")
+	viper.SetConfigName(Name)
 	viper.AddConfigPath("/etc/taos")
 
 	cp := pflag.StringP("c", "c", "", "taoskeeper config file")
