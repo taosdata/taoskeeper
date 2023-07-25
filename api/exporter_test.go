@@ -172,21 +172,6 @@ var report = Report{
 		},
 	},
 	LogInfos: LogInfo{
-		Logs: []Log{
-			{
-				Ts:      "2022-03-04T17:11:06.353+0800",
-				Level:   "info",
-				Content: "mnode open successfully",
-			}, {
-				Ts:      "2022-03-04T17:11:06.353+0800",
-				Level:   "info",
-				Content: "dnode-transpaort is initialized",
-			}, {
-				Ts:      "2022-03-04T17:11:06.353+0800",
-				Level:   "info",
-				Content: "dnode object is created, data:0x55ae5ac8a4a0",
-			},
-		},
 		Summary: []Summary{
 			{
 				Level: "error",
