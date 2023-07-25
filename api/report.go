@@ -27,7 +27,6 @@ var createList = []string{
 	CreateTempDirSql,
 	CreateVgroupsInfoSql,
 	CreateVnodeRoleSql,
-	CreateLogSql,
 	CreateSummarySql,
 	CreateGrantInfoSql,
 	CreateKeeperSql,
@@ -298,7 +297,7 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 		for _, group := range report.VgroupInfos {
 			sqls = append(sqls, insertVgroupSql(group, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts)...)
 		}
-		sqls = append(sqls, insertLogSql(report.LogInfos, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts)...)
+		sqls = append(sqls, insertLogSummary(report.LogInfos, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts))
 
 		conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname)
 		if err != nil {
@@ -405,12 +404,7 @@ func insertVgroupSql(g VgroupInfo, DnodeID int, DnodeEp string, ClusterID string
 	return sqls
 }
 
-func insertLogSql(log LogInfo, DnodeID int, DnodeEp string, ClusterID string, ts string) []string {
-	var sqls []string
-	for _, l := range log.Logs {
-		sqls = append(sqls, fmt.Sprintf("insert into logs_%s using logs tags (%d, '%s', '%s') values ('%s', '%s', '%s')",
-			ClusterID+strconv.Itoa(DnodeID), DnodeID, DnodeEp, ClusterID, l.Ts, l.Level, l.Content))
-	}
+func insertLogSummary(log LogInfo, DnodeID int, DnodeEp string, ClusterID string, ts string) string {
 	var e, info, debug, trace int
 	for _, s := range log.Summary {
 		switch s.Level {
@@ -424,9 +418,8 @@ func insertLogSql(log LogInfo, DnodeID int, DnodeEp string, ClusterID string, ts
 			trace = s.Total
 		}
 	}
-	sqls = append(sqls, fmt.Sprintf("insert into log_summary_%s using log_summary tags (%d, '%s', '%s') values ('%s', %d, %d, %d, %d)",
-		ClusterID+strconv.Itoa(DnodeID), DnodeID, DnodeEp, ClusterID, ts, e, info, debug, trace))
-	return sqls
+	return fmt.Sprintf("insert into log_summary_%s using log_summary tags (%d, '%s', '%s') values ('%s', %d, %d, %d, %d)",
+		ClusterID+strconv.Itoa(DnodeID), DnodeID, DnodeEp, ClusterID, ts, e, info, debug, trace)
 }
 
 func insertGrantSql(g GrantInfo, DnodeID int, DnodeEp string, ClusterID string, ts string) string {

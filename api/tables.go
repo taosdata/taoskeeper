@@ -243,7 +243,6 @@ var CreateVnodeRoleSql = "create table if not exists vnodes_role (" +
 	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 type LogInfo struct {
-	Logs    []Log     `json:"logs"`
 	Summary []Summary `json:"summary"`
 }
 
@@ -252,12 +251,6 @@ type Log struct {
 	Level   string `json:"level"`
 	Content string `json:"content"`
 }
-
-var CreateLogSql = "create table if not exists logs (" +
-	"ts timestamp, " +
-	"level binary(10), " +
-	"content nchar(1024)" +
-	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
 
 type Summary struct {
 	Level string `json:"level"`
