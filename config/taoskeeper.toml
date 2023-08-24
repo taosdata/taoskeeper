@@ -40,3 +40,9 @@ cachemodel = "none"
 [environment]
 # Whether running in cgroup.
 incgroup = false
+
+[audit]
+[audit.database]
+name = "audit"
+[audit.database.options]
+cachemodel = "none"
