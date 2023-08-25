@@ -81,10 +81,11 @@ func (a *Audit) handleFunc() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get audit data error. %s", err)})
 			return
 		}
+		auditLogger.Trace("## receive audit data", "data", string(data))
 
 		var audit AuditInfo
 		if err := json.Unmarshal(data, &audit); err != nil {
-			auditLogger.WithError(err).Errorf("## parse audit data error")
+			auditLogger.WithError(err).Errorf("## parse audit data %s error", string(data))
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse audit data error: %s", err)})
 			return
 		}
@@ -107,8 +108,9 @@ func parseSql(audit AuditInfo) string {
 
 func getTableName(audit AuditInfo) string {
 	// table name is md5(user + operation + target_1 + target_2 + cluster_id)
-	sum := md5.Sum([]byte(fmt.Sprintf("%s%s%s%s%s", audit.User, audit.Operation, audit.Target1, audit.Target2, audit.ClusterID)))
-	return hex.EncodeToString(sum[:])
+	sum := md5.Sum([]byte(fmt.Sprintf("%s%s%s%s%s", audit.User, audit.Operation, audit.Target1, audit.Target2,
+		audit.ClusterID)))
+	return fmt.Sprintf("t_%s", hex.EncodeToString(sum[:]))
 }
 
 func (a *Audit) initConnect() error {
