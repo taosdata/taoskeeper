@@ -27,6 +27,7 @@ type Config struct {
 	TaosAdapter      TaosAdapter     `toml:"taosAdapter"`
 	Metrics          MetricsConfig   `toml:"metrics"`
 	Env              Environment     `toml:"environment"`
+	Audit            AuditConfig     `toml:"audit"`
 }
 
 type TDengineRestful struct {

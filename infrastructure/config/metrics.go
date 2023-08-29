@@ -22,3 +22,12 @@ type Metric struct {
 type Environment struct {
 	InCGroup bool `toml:"incgroup"`
 }
+
+type Database struct {
+	Name    string                 `toml:"name"`
+	Options map[string]interface{} `toml:"options"`
+}
+
+type AuditConfig struct {
+	Database Database `toml:"database"`
+}

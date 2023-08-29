@@ -31,6 +31,13 @@ func main() {
 	node.Init(router)
 	checkHealth := api.NewCheckHealth(version.Version)
 	checkHealth.Init(router)
+	audit, err := api.NewAudit(conf)
+	if err != nil {
+		panic(err)
+	}
+	if err = audit.Init(router); err != nil {
+		panic(err)
+	}
 
 	server := &http.Server{
 		Addr:    ":" + strconv.Itoa(conf.Port),
