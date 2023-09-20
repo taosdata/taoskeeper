@@ -97,7 +97,7 @@ type DnodeInfo struct {
 	MemEngine             int     `json:"mem_engine"`
 	MemSystem             int     `json:"mem_system"`
 	MemTotal              int     `json:"mem_total"`
-	DiskEngine            int     `json:"disk_engine"`
+	DiskEngine            int64   `json:"disk_engine"`
 	DiskUsed              int64   `json:"disk_used"`
 	DiskTotal             int64   `json:"disk_total"`
 	NetIn                 float32 `json:"net_in"`
@@ -132,7 +132,7 @@ var CreateDnodeInfoSql = "create table if not exists dnodes_info (" +
 	"mem_engine int, " +
 	"mem_system int, " +
 	"mem_total int, " +
-	"disk_engine int, " +
+	"disk_engine bigint, " +
 	"disk_used bigint, " +
 	"disk_total bigint, " +
 	"net_in float, " +
