@@ -161,7 +161,7 @@ func (a *Audit) createDBSql() string {
 }
 
 var createTableSql = "create stable if not exists operations " +
-	"(ts timestamp, user_name varchar(25), operation varchar(20), details varchar(16000)) " +
+	"(ts timestamp, user_name varchar(25), operation varchar(20), details varchar(64000)) " +
 	"tags (target_1 varchar(100), target_2 varchar(300), cluster_id varchar(32))"
 
 func (a *Audit) createSTables() error {
