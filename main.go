@@ -38,6 +38,10 @@ func main() {
 	if err = audit.Init(router); err != nil {
 		panic(err)
 	}
+	adapter := api.NewAdapter(conf)
+	if err = adapter.Init(router); err != nil {
+		panic(err)
+	}
 
 	server := &http.Server{
 		Addr:    ":" + strconv.Itoa(conf.Port),
