@@ -40,6 +40,10 @@ func TestAudit(t *testing.T) {
 
 	conn, err := db.NewConnectorWithDb(c.TDengine.Username, c.TDengine.Password, c.TDengine.Host, c.TDengine.Port, c.Audit.Database.Name)
 	assert.NoError(t, err)
+	defer func() {
+		_, _ = conn.Query(context.Background(), "drop database if exists audit.operations")
+	}()
+
 	data, err := conn.Query(context.Background(), "select ts, user_name from audit.operations")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(data.Data))
