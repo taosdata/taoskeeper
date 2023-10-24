@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -32,11 +33,26 @@ func TestAudit(t *testing.T) {
 	err = a.Init(router)
 	assert.NoError(t, err)
 
-	w := httptest.NewRecorder()
-	body := strings.NewReader(`{"timestamp": 1692840000000, "cluster_id": "cluster_id", "user": "user", "operation": "operation", "target_1": "target_1", "target_2": "target_2", "details": "detail"}`)
-	req, _ := http.NewRequest(http.MethodPost, "/audit", body)
-	router.ServeHTTP(w, req)
-	assert.Equal(t, 200, w.Code)
+	cases := []struct {
+		name   string
+		ts     int64
+		detail string
+		data   string
+		expect string
+	}{
+		{
+			name:   "1",
+			ts:     1692840000000,
+			data:   `{"timestamp": 1692840000000, "cluster_id": "cluster_id", "user": "user", "operation": "operation", "client_add": "localhost:30000", "details": "detail"}`,
+			expect: "detail",
+		},
+		{
+			name:   "2",
+			ts:     1692850000000,
+			data:   "{\"timestamp\": 1692850000000, \"cluster_id\": \"cluster_id\", \"user\": \"user\", \"operation\": \"operation\", \"client_add\": \"localhost:30000\", \"details\": \"create database `meter` buffer 32 cachemodel 'none' duration 50d keep 3650d single_stable 0 wal_retention_period 3600 precision 'ms'\"}",
+			expect: "create database `meter` buffer 32 cachemodel 'none' duration 50d keep 3650d single_stable 0 wal_retention_period 3600 precision 'ms'",
+		},
+	}
 
 	conn, err := db.NewConnectorWithDb(c.TDengine.Username, c.TDengine.Password, c.TDengine.Host, c.TDengine.Port, c.Audit.Database.Name)
 	assert.NoError(t, err)
@@ -44,8 +60,18 @@ func TestAudit(t *testing.T) {
 		_, _ = conn.Query(context.Background(), "drop database if exists audit.operations")
 	}()
 
-	data, err := conn.Query(context.Background(), "select ts, user_name from audit.operations")
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(data.Data))
-	assert.Equal(t, "user", data.Data[0][1])
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			body := strings.NewReader(c.data)
+			req, _ := http.NewRequest(http.MethodPost, "/audit", body)
+			router.ServeHTTP(w, req)
+			assert.Equal(t, 200, w.Code)
+
+			data, err := conn.Query(context.Background(), fmt.Sprintf("select ts, details from audit.operations where ts=%d", c.ts))
+			assert.NoError(t, err)
+			assert.Equal(t, 1, len(data.Data))
+			assert.Equal(t, c.expect, data.Data[0][1])
+		})
+	}
 }
