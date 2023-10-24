@@ -3,17 +3,16 @@ package api
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
+	"net/http"
+	"strings"
+	"time"
 )
 
 var auditLogger = log.GetLogger("audit")
@@ -33,8 +32,7 @@ type AuditInfo struct {
 	ClusterID string `json:"cluster_id"`
 	User      string `json:"user"`
 	Operation string `json:"operation"`
-	Target1   string `json:"target_1"`
-	Target2   string `json:"target_2"`
+	ClientAdd string `json:"client_add"` // client address
 	Details   string `json:"details"`
 }
 
@@ -101,16 +99,21 @@ func (a *Audit) handleFunc() gin.HandlerFunc {
 }
 
 func parseSql(audit AuditInfo) string {
+	details := audit.Details
+	if strings.Contains(details, "'") {
+		details = strings.ReplaceAll(details, "'", "\\'")
+	}
+	if strings.Contains(details, "\"") {
+		details = strings.ReplaceAll(details, "\"", "\\\"")
+	}
+	ts := time.UnixMilli(audit.Timestamp).Format(time.RFC3339)
 	return fmt.Sprintf(
-		"insert into %s using operations tags ('%s', '%s', '%s') values (%d, '%s', '%s', '%s')",
-		getTableName(audit), audit.Target1, audit.Target2, audit.ClusterID, audit.Timestamp, audit.User, audit.Operation, audit.Details)
+		"insert into %s using operations tags ('%s') values ('%s', '%s', '%s', '%s', '%s')",
+		getTableName(audit), audit.ClusterID, ts, audit.User, audit.Operation, audit.ClientAdd, details)
 }
 
 func getTableName(audit AuditInfo) string {
-	// table name is md5(user + operation + target_1 + target_2 + cluster_id)
-	sum := md5.Sum([]byte(fmt.Sprintf("%s%s%s%s%s", audit.User, audit.Operation, audit.Target1, audit.Target2,
-		audit.ClusterID)))
-	return fmt.Sprintf("t_%s", hex.EncodeToString(sum[:]))
+	return fmt.Sprintf("t_operations_%s", audit.ClusterID)
 }
 
 func (a *Audit) initConnect() error {
@@ -161,8 +164,8 @@ func (a *Audit) createDBSql() string {
 }
 
 var createTableSql = "create stable if not exists operations " +
-	"(ts timestamp, user_name varchar(25), operation varchar(20), details varchar(65472)) " +
-	"tags (target_1 varchar(100), target_2 varchar(300), cluster_id varchar(32))"
+	"(ts timestamp, user_name varchar(25), operation varchar(20), client_address varchar(25), details varchar(65444)) " +
+	"tags (cluster_id varchar(64))"
 
 func (a *Audit) createSTables() error {
 	if a.conn == nil {
