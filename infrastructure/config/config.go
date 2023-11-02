@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -48,15 +47,16 @@ func InitConfig() *Config {
 	help := pflag.BoolP("help", "h", false, "Print this help message and exit")
 	pflag.Parse()
 
-	version := strings.Split(version.Version, "-")[1]
 	if *help {
-		fmt.Fprintf(os.Stderr, "Usage of taosKeeper %s:\n", version)
+		fmt.Fprintf(os.Stderr, "Usage of taosKeeper %s:\n", version.Version)
 		pflag.PrintDefaults()
 		os.Exit(0)
 	}
 
 	if *v {
-		fmt.Printf("%s\n", version)
+		fmt.Printf("version: %s\n", version.Version)
+		fmt.Printf("gitinfo: %s\n", version.Gitinfo)
+		fmt.Printf("buildInfo: %s\n", version.BuildInfo)
 		os.Exit(0)
 	}
 
