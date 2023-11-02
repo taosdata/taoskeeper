@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -43,18 +44,19 @@ func InitConfig() *Config {
 	viper.AddConfigPath("/etc/taos")
 
 	cp := pflag.StringP("c", "c", "", "taoskeeper config file")
-	v := pflag.Bool("version", false, "Print the version and exit")
+	v := pflag.BoolP("version", "V", false, "Print the version and exit")
 	help := pflag.BoolP("help", "h", false, "Print this help message and exit")
 	pflag.Parse()
 
+	version := strings.Split(version.Version, "-")[1]
 	if *help {
-		fmt.Fprintf(os.Stderr, "Usage of taosKeeper v%s:\n", version.Version)
+		fmt.Fprintf(os.Stderr, "Usage of taosKeeper %s:\n", version)
 		pflag.PrintDefaults()
 		os.Exit(0)
 	}
 
 	if *v {
-		fmt.Printf("%s\n", version.Version)
+		fmt.Printf("%s\n", version)
 		os.Exit(0)
 	}
 
