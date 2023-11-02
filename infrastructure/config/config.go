@@ -48,7 +48,7 @@ func InitConfig() *Config {
 	pflag.Parse()
 
 	if *help {
-		fmt.Fprintf(os.Stderr, "Usage of taosKeeper %s:\n", version.Version)
+		fmt.Fprintf(os.Stderr, "Usage of taosKeeper v%s:\n", version.Version)
 		pflag.PrintDefaults()
 		os.Exit(0)
 	}
