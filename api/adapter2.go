@@ -7,12 +7,19 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/url"
+	"time"
+
 	"github.com/gin-gonic/gin"
+	tmetric "github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/inputs/prometheus"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
-	"net/http"
-	"time"
 )
 
 var adapterLog = log.GetLogger("adapter")
@@ -30,17 +37,33 @@ type Adapter struct {
 	host      string
 	port      int
 	conn      *db.Connector
+	client    *http.Client
 	db        string
 	dbOptions map[string]interface{}
 }
 
 func NewAdapter(c *config.Config) *Adapter {
+	client := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			DisableCompression:    true,
+		},
+	}
+
 	return &Adapter{
 		username:  c.TDengine.Username,
 		password:  c.TDengine.Password,
 		host:      c.TDengine.Host,
 		port:      c.TDengine.Port,
 		db:        c.Metrics.Database,
+		client:    client,
 		dbOptions: c.Metrics.DatabaseOptions,
 	}
 }
@@ -55,11 +78,83 @@ func (a *Adapter) Init(c gin.IRouter) error {
 	if err := a.createTable(); err != nil {
 		return fmt.Errorf("create table error: %s", err)
 	}
-	c.POST("/adapter_report", a.handleFunc())
+	c.POST("/adapter_report", a.handleReport())
+	c.POST("/td_metric", a.handleTdMetric())
 	return nil
 }
 
-func (a *Adapter) handleFunc() gin.HandlerFunc {
+func (a *Adapter) handleTdMetric() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if a.conn == nil {
+			adapterLog.Error("no connection")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "no connection"})
+			return
+		}
+
+		data, err := c.GetRawData()
+		if err != nil {
+			adapterLog.WithError(err).Errorf("## get td metircs data error")
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get td metircs data error. %s", err)})
+			return
+		}
+		adapterLog.Trace("## receive td metircs data", "data", string(data))
+
+		u := &url.URL{
+			Scheme:   "http",
+			Host:     fmt.Sprintf("%s:%d", a.host, a.port),
+			Path:     "/influxdb/v1/write",
+			RawQuery: fmt.Sprintf("db=%s", a.db),
+		}
+		header := map[string][]string{
+			"Connection": {"keep-alive"},
+		}
+		req := &http.Request{
+			Method:     http.MethodPost,
+			URL:        u,
+			Proto:      "HTTP/1.1",
+			ProtoMajor: 1,
+			ProtoMinor: 1,
+			Header:     header,
+			Host:       u.Host,
+		}
+		req.SetBasicAuth(a.username, a.password)
+
+		metrics, err := prometheus.Parse(data, nil, false)
+		if err != nil {
+			logger.Errorf("error parse data: %s", err)
+			return
+		}
+		d := bytes.Buffer{}
+		for _, metric := range metrics {
+			name := "taosd_" + metric.Name()
+			tags := metric.Tags()
+
+			m := tmetric.New(name, tags, metric.Fields(), metric.Time(), metric.Type())
+			data, err := influx.NewSerializer().Serialize(m)
+			if err != nil {
+				errmsg := fmt.Sprintf("error serialize metric: %s, error: %s", metric, err)
+				logger.Errorf(errmsg)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": errmsg})
+				return
+			}
+			d.Write(data)
+		}
+		req.Body = io.NopCloser(bytes.NewReader(d.Bytes()))
+		resp, err := a.client.Do(req)
+
+		if err != nil {
+			errmsg := fmt.Sprintf("writing metrics exception: %v", err)
+			logger.Errorf(errmsg)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": errmsg})
+			return
+		}
+		_ = resp.Body.Close()
+
+		c.JSON(http.StatusOK, gin.H{})
+	}
+}
+
+func (a *Adapter) handleReport() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if a.conn == nil {
 			adapterLog.Error("no connection")

@@ -2,16 +2,17 @@ package api
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
-	"github.com/taosdata/taoskeeper/db"
-	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/taosdata/taoskeeper/db"
+	"github.com/taosdata/taoskeeper/infrastructure/config"
 )
 
-func TestAdapter2(t *testing.T) {
+func TestAdapterReport(t *testing.T) {
 	c := &config.Config{
 		Port: 6043,
 		TDengine: config.TDengineRestful{
@@ -85,4 +86,50 @@ func TestAdapter2(t *testing.T) {
 	assert.Equal(t, uint32(2), data.Data[0][13])
 	assert.Equal(t, uint32(1), data.Data[0][14])
 	assert.Equal(t, uint32(2), data.Data[0][15])
+}
+
+func TestTdMetrics(t *testing.T) {
+	c := &config.Config{
+		Port: 6043,
+		TDengine: config.TDengineRestful{
+			Host:     "127.0.0.1",
+			Port:     6041,
+			Username: "root",
+			Password: "taosdata",
+		},
+		Metrics: config.MetricsConfig{
+			Database: "td_metric_test",
+		},
+	}
+	a := NewAdapter(c)
+	err := a.Init(router)
+	assert.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	body := strings.NewReader("# TYPE http_requests_total counter\n" +
+		"http_requests_total{method=\"post\",code=\"200\"} 1027 1395066363000\n" +
+		"http_requests_total{method=\"post\",code=\"400\"}    3 1395066363000\n" +
+		"# TYPE rpc_requests_total counter\n" +
+		"rpc_requests_total{method=\"add\",nodeid=\"1\"}    3 1395066363000\n" +
+		"# TYPE queue_len gauge\n" +
+		"queue_len{nodeid=\"2\"} 1027 1395066363000\n" +
+		"queue_len{nodeid=\"2\"}    3 1395066363000\n")
+	req, _ := http.NewRequest(http.MethodPost, "/td_metric", body)
+	router.ServeHTTP(w, req)
+	assert.Equal(t, 200, w.Code)
+
+	conn, err := db.NewConnectorWithDb(c.TDengine.Username, c.TDengine.Password, c.TDengine.Host, c.TDengine.Port, c.Metrics.Database)
+	defer func() {
+		_, _ = conn.Query(context.Background(), "drop database if exists td_metric_test")
+	}()
+
+	assert.NoError(t, err)
+	data, err := conn.Query(context.Background(), "select * from taosd_http_requests_total")
+
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(data.Data))
+
+	assert.Equal(t, float64(1027), data.Data[0][1])
+	assert.Equal(t, float64(3), data.Data[1][1])
+
 }
