@@ -43,7 +43,7 @@ func InitConfig() *Config {
 	viper.AddConfigPath("/etc/taos")
 
 	cp := pflag.StringP("c", "c", "", "taoskeeper config file")
-	v := pflag.Bool("version", false, "Print the version and exit")
+	v := pflag.BoolP("version", "V", false, "Print the version and exit")
 	help := pflag.BoolP("help", "h", false, "Print this help message and exit")
 	pflag.Parse()
 
@@ -54,7 +54,9 @@ func InitConfig() *Config {
 	}
 
 	if *v {
-		fmt.Printf("%s\n", version.Version)
+		fmt.Printf("version: %s\n", version.Version)
+		fmt.Printf("gitinfo: %s\n", version.Gitinfo)
+		fmt.Printf("buildInfo: %s\n", version.BuildInfo)
 		os.Exit(0)
 	}
 
