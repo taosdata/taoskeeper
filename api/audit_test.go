@@ -33,6 +33,8 @@ func TestAudit(t *testing.T) {
 	err = a.Init(router)
 	assert.NoError(t, err)
 
+	longDetails := strings.Repeat("0123456789", 5000)
+
 	cases := []struct {
 		name   string
 		ts     int64
@@ -49,7 +51,13 @@ func TestAudit(t *testing.T) {
 		{
 			name:   "2",
 			ts:     1692850000000,
-			data:   "{\"timestamp\": 1692850000000, \"cluster_id\": \"cluster_id\", \"user\": \"user\", \"operation\": \"operation\", \"db\":\"dbnameb\", \"resource\":\"resourcenameb\", \"client_add\": \"localhost:30000\", \"details\": \"create database `meter` buffer 32 cachemodel 'none' duration 50d keep 3650d single_stable 0 wal_retention_period 3600 precision 'ms'\"}",
+			data:   `{"timestamp": 1692850000000, "cluster_id": "cluster_id", "user": "user", "operation": "operation", "db":"dbnamea", "resource":"resourcenamea", "client_add": "localhost:30000", "details": "` + longDetails + `"}`,
+			expect: longDetails[:50000],
+		},
+		{
+			name:   "3",
+			ts:     1692860000000,
+			data:   "{\"timestamp\": 1692860000000, \"cluster_id\": \"cluster_id\", \"user\": \"user\", \"operation\": \"operation\", \"db\":\"dbnameb\", \"resource\":\"resourcenameb\", \"client_add\": \"localhost:30000\", \"details\": \"create database `meter` buffer 32 cachemodel 'none' duration 50d keep 3650d single_stable 0 wal_retention_period 3600 precision 'ms'\"}",
 			expect: "create database `meter` buffer 32 cachemodel 'none' duration 50d keep 3650d single_stable 0 wal_retention_period 3600 precision 'ms'",
 		},
 	}
@@ -57,7 +65,7 @@ func TestAudit(t *testing.T) {
 	conn, err := db.NewConnectorWithDb(c.TDengine.Username, c.TDengine.Password, c.TDengine.Host, c.TDengine.Port, c.Audit.Database.Name)
 	assert.NoError(t, err)
 	defer func() {
-		_, _ = conn.Query(context.Background(), "drop database if exists audit.operations_v2")
+		_, _ = conn.Query(context.Background(), "drop stable if exists audit.operations_v2")
 	}()
 
 	for _, c := range cases {

@@ -18,6 +18,8 @@ import (
 
 var auditLogger = log.GetLogger("audit")
 
+const MAX_DETAIL_LEN = 50000
+
 type Audit struct {
 	username  string
 	password  string
@@ -109,6 +111,10 @@ func parseSql(audit AuditInfo) string {
 	if strings.Contains(details, "\"") {
 		details = strings.ReplaceAll(details, "\"", "\\\"")
 	}
+	if len(details) > MAX_DETAIL_LEN {
+		details = details[:MAX_DETAIL_LEN]
+	}
+
 	ts := time.UnixMilli(audit.Timestamp).Format(time.RFC3339)
 	return fmt.Sprintf(
 		"insert into %s using operations_v2 tags ('%s') values ('%s', '%s', '%s', '%s', '%s', '%s', '%s')",
