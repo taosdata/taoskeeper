@@ -115,7 +115,7 @@ func parseSql(audit AuditInfo) string {
 		details = details[:MAX_DETAIL_LEN]
 	}
 
-	ts := time.UnixMilli(audit.Timestamp).Format(time.RFC3339)
+	ts := time.UnixMilli(audit.Timestamp).Format(time.RFC3339Nano)
 	return fmt.Sprintf(
 		"insert into %s using operations_v2 tags ('%s') values ('%s', '%s', '%s', '%s', '%s', '%s', '%s')",
 		getTableName(audit), audit.ClusterID, ts, audit.User, audit.Operation, audit.Db, audit.Resource, audit.ClientAdd, details)
