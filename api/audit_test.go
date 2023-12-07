@@ -114,6 +114,16 @@ func TestAuditBatch(t *testing.T) {
 	}()
 
 	t.Run("testbatch", func(t *testing.T) {
+
+		//test empty array
+		w1 := httptest.NewRecorder()
+		body1 := strings.NewReader(`{"records": []}`)
+
+		req1, _ := http.NewRequest(http.MethodPost, "/audit-batch", body1)
+		router.ServeHTTP(w1, req1)
+		assert.Equal(t, 200, w1.Code)
+
+		//test 2 items array
 		w := httptest.NewRecorder()
 		body := strings.NewReader(input)
 		req, _ := http.NewRequest(http.MethodPost, "/audit-batch", body)
