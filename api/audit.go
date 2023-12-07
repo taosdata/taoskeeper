@@ -231,7 +231,7 @@ var noConnectionError = errors.New("no connection")
 
 func (a *Audit) createDBSql() string {
 	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("create database if not exists %s ", a.db))
+	buf.WriteString(fmt.Sprintf("create database if not exists %s precision 'ns' ", a.db))
 
 	for k, v := range a.dbOptions {
 		buf.WriteString(k)

@@ -46,4 +46,3 @@ incgroup = false
 name = "audit"
 [audit.database.options]
 cachemodel = "none"
-precision = "ns"
