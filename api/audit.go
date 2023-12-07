@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/taosdata/taoskeeper/db"
@@ -31,7 +30,7 @@ type Audit struct {
 }
 
 type AuditInfo struct {
-	Timestamp int64  `json:"timestamp"`
+	Timestamp string `json:"timestamp"`
 	ClusterID string `json:"cluster_id"`
 	User      string `json:"user"`
 	Operation string `json:"operation"`
@@ -39,6 +38,10 @@ type AuditInfo struct {
 	Resource  string `json:"resource"`
 	ClientAdd string `json:"client_add"` // client address
 	Details   string `json:"details"`
+}
+
+type AuditArrayInfo struct {
+	Records []AuditInfo `json:"records"`
 }
 
 func NewAudit(c *config.Config) (*Audit, error) {
@@ -67,7 +70,53 @@ func (a *Audit) Init(c gin.IRouter) error {
 		return fmt.Errorf("create stable error: %s", err)
 	}
 	c.POST("/audit", a.handleFunc())
+	c.POST("/audit-batch", a.handleBatchFunc())
 	return nil
+}
+
+func (a *Audit) handleBatchFunc() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if a.conn == nil {
+			auditLogger.Error("no connection")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "no connection"})
+			return
+		}
+
+		data, err := c.GetRawData()
+		if err != nil {
+			auditLogger.WithError(err).Errorf("## get audit data error")
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get audit data error. %s", err)})
+			return
+		}
+		auditLogger.Trace("## receive audit data", "data", string(data))
+
+		var auditArray AuditArrayInfo
+
+		if err := json.Unmarshal(data, &auditArray); err != nil {
+			auditLogger.WithError(err).Errorf("## parse audit data %s error", string(data))
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse audit data error: %s", err)})
+			return
+		}
+
+		if len(auditArray.Records) == 0 {
+			c.JSON(http.StatusOK, gin.H{})
+			return
+		}
+
+		sql := parseBatchSql(auditArray.Records)
+		if err != nil {
+			auditLogger.WithError(err).Errorf("## parse sql error")
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("timestamp format error. %s", err)})
+			return
+		}
+
+		if _, err = a.conn.Exec(context.Background(), sql); err != nil {
+			auditLogger.WithError(err).Error("##save audit data error", "sql", sql)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("save audit data error: %s", err)})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{})
+	}
 }
 
 func (a *Audit) handleFunc() gin.HandlerFunc {
@@ -94,6 +143,12 @@ func (a *Audit) handleFunc() gin.HandlerFunc {
 		}
 
 		sql := parseSql(audit)
+		if err != nil {
+			auditLogger.WithError(err).Errorf("## parse sql error")
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("timestamp format error. %s", err)})
+			return
+		}
+
 		if _, err = a.conn.Exec(context.Background(), sql); err != nil {
 			auditLogger.WithError(err).Error("##save audit data error", "sql", sql)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("save audit data error: %s", err)})
@@ -103,8 +158,7 @@ func (a *Audit) handleFunc() gin.HandlerFunc {
 	}
 }
 
-func parseSql(audit AuditInfo) string {
-	details := audit.Details
+func handleDetails(details string) string {
 	if strings.Contains(details, "'") {
 		details = strings.ReplaceAll(details, "'", "\\'")
 	}
@@ -114,15 +168,36 @@ func parseSql(audit AuditInfo) string {
 	if len(details) > MAX_DETAIL_LEN {
 		details = details[:MAX_DETAIL_LEN]
 	}
+	return details
+}
 
-	ts := time.UnixMilli(audit.Timestamp).Format(time.RFC3339Nano)
+func parseSql(audit AuditInfo) string {
+	details := handleDetails(audit.Details)
+
 	return fmt.Sprintf(
-		"insert into %s using operations_v2 tags ('%s') values ('%s', '%s', '%s', '%s', '%s', '%s', '%s')",
-		getTableName(audit), audit.ClusterID, ts, audit.User, audit.Operation, audit.Db, audit.Resource, audit.ClientAdd, details)
+		"insert into %s using operations tags ('%s') values (%s, '%s', '%s', '%s', '%s', '%s', '%s') ",
+		getTableName(audit), audit.ClusterID, audit.Timestamp, audit.User, audit.Operation, audit.Db, audit.Resource, audit.ClientAdd, details)
+}
+
+func parseBatchSql(auditArray []AuditInfo) string {
+	var builder strings.Builder
+	var head = fmt.Sprintf(
+		"insert into %s using operations tags ('%s') values",
+		getTableName(auditArray[0]), auditArray[0].ClusterID)
+	builder.WriteString(head)
+
+	for _, audit := range auditArray {
+		details := handleDetails(audit.Details)
+		varluesStr := fmt.Sprintf(
+			"(%s, '%s', '%s', '%s', '%s', '%s', '%s') ",
+			audit.Timestamp, audit.User, audit.Operation, audit.Db, audit.Resource, audit.ClientAdd, details)
+		builder.WriteString(varluesStr)
+	}
+	return builder.String()
 }
 
 func getTableName(audit AuditInfo) string {
-	return fmt.Sprintf("t_operations_v2_%s", audit.ClusterID)
+	return fmt.Sprintf("t_operations_%s", audit.ClusterID)
 }
 
 func (a *Audit) initConnect() error {
@@ -172,7 +247,7 @@ func (a *Audit) createDBSql() string {
 	return buf.String()
 }
 
-var createTableSql = "create stable if not exists operations_v2 " +
+var createTableSql = "create stable if not exists operations " +
 	"(ts timestamp, user_name varchar(25), operation varchar(20), db varchar(65), resource varchar(193), client_address varchar(25), details varchar(50000)) " +
 	"tags (cluster_id varchar(64))"
 
