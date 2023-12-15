@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"strings"
 
-	// "sync"
-
 	"github.com/gin-gonic/gin"
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
@@ -22,9 +20,6 @@ var auditLogger = log.GetLogger("audit")
 const MAX_DETAIL_LEN = 50000
 
 const MAX_SQL_LEN = 1000 * 1000
-
-// var idMap = sync.Map{}
-// var duplicateCount = 0
 
 type Audit struct {
 	username  string
@@ -191,10 +186,6 @@ func handleBatchRecord(auditArray []AuditInfo, conn *db.Connector) error {
 
 	builder.WriteString(head)
 	for _, audit := range auditArray {
-		// if _, exists := idMap.Load(audit.Timestamp); exists {
-		// 	duplicateCount += 1
-		// }
-		// idMap.Store(audit.Timestamp, true)
 
 		details := handleDetails(audit.Details)
 		varluesStr := fmt.Sprintf(
@@ -218,10 +209,6 @@ func handleBatchRecord(auditArray []AuditInfo, conn *db.Connector) error {
 			return err
 		}
 	}
-
-	// if duplicateCount > 0 {
-	// 	auditLogger.Error("## Duplicate total: ", duplicateCount)
-	// }
 
 	return nil
 }
