@@ -19,7 +19,7 @@ var auditLogger = log.GetLogger("audit")
 
 const MAX_DETAIL_LEN = 50000
 
-const MAX_SQL_LEN = 1000 * 1000
+var MAX_SQL_LEN = 1000 * 1000
 
 type Audit struct {
 	username  string
@@ -188,11 +188,11 @@ func handleBatchRecord(auditArray []AuditInfo, conn *db.Connector) error {
 	for _, audit := range auditArray {
 
 		details := handleDetails(audit.Details)
-		varluesStr := fmt.Sprintf(
+		valuesStr := fmt.Sprintf(
 			"(%s, '%s', '%s', '%s', '%s', '%s', '%s') ",
 			audit.Timestamp, audit.User, audit.Operation, audit.Db, audit.Resource, audit.ClientAdd, details)
 
-		if (builder.Len() + len(varluesStr)) > MAX_SQL_LEN {
+		if (builder.Len() + len(valuesStr)) > MAX_SQL_LEN {
 			sql := builder.String()
 			if _, err := conn.Exec(context.Background(), sql); err != nil {
 				return err
@@ -200,7 +200,7 @@ func handleBatchRecord(auditArray []AuditInfo, conn *db.Connector) error {
 			builder.Reset()
 			builder.WriteString(head)
 		}
-		builder.WriteString(varluesStr)
+		builder.WriteString(valuesStr)
 	}
 
 	if builder.Len() > len(head) {
