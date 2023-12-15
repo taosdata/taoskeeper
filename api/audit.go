@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 
+	// "sync"
+
 	"github.com/gin-gonic/gin"
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
@@ -18,6 +20,11 @@ import (
 var auditLogger = log.GetLogger("audit")
 
 const MAX_DETAIL_LEN = 50000
+
+const MAX_SQL_LEN = 1000 * 1000
+
+// var idMap = sync.Map{}
+// var duplicateCount = 0
 
 type Audit struct {
 	username  string
@@ -103,18 +110,14 @@ func (a *Audit) handleBatchFunc() gin.HandlerFunc {
 			return
 		}
 
-		sql := parseBatchSql(auditArray.Records)
+		err = handleBatchRecord(auditArray.Records, a.conn)
+
 		if err != nil {
-			auditLogger.WithError(err).Errorf("## parse sql error")
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("timestamp format error. %s", err)})
+			auditLogger.WithError(err).Errorf("## process records error")
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("process records error. %s", err)})
 			return
 		}
 
-		if _, err = a.conn.Exec(context.Background(), sql); err != nil {
-			auditLogger.WithError(err).Error("##save audit data error", "sql", sql)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("save audit data error: %s", err)})
-			return
-		}
 		c.JSON(http.StatusOK, gin.H{})
 	}
 }
@@ -179,21 +182,48 @@ func parseSql(audit AuditInfo) string {
 		getTableName(audit), audit.ClusterID, audit.Timestamp, audit.User, audit.Operation, audit.Db, audit.Resource, audit.ClientAdd, details)
 }
 
-func parseBatchSql(auditArray []AuditInfo) string {
+func handleBatchRecord(auditArray []AuditInfo, conn *db.Connector) error {
+
 	var builder strings.Builder
 	var head = fmt.Sprintf(
 		"insert into %s using operations tags ('%s') values",
 		getTableName(auditArray[0]), auditArray[0].ClusterID)
-	builder.WriteString(head)
 
+	builder.WriteString(head)
 	for _, audit := range auditArray {
+		// if _, exists := idMap.Load(audit.Timestamp); exists {
+		// 	duplicateCount += 1
+		// }
+		// idMap.Store(audit.Timestamp, true)
+
 		details := handleDetails(audit.Details)
 		varluesStr := fmt.Sprintf(
 			"(%s, '%s', '%s', '%s', '%s', '%s', '%s') ",
 			audit.Timestamp, audit.User, audit.Operation, audit.Db, audit.Resource, audit.ClientAdd, details)
+
+		if (builder.Len() + len(varluesStr)) > MAX_SQL_LEN {
+			sql := builder.String()
+			if _, err := conn.Exec(context.Background(), sql); err != nil {
+				return err
+			}
+			builder.Reset()
+			builder.WriteString(head)
+		}
 		builder.WriteString(varluesStr)
 	}
-	return builder.String()
+
+	if builder.Len() > len(head) {
+		sql := builder.String()
+		if _, err := conn.Exec(context.Background(), sql); err != nil {
+			return err
+		}
+	}
+
+	// if duplicateCount > 0 {
+	// 	auditLogger.Error("## Duplicate total: ", duplicateCount)
+	// }
+
+	return nil
 }
 
 func getTableName(audit AuditInfo) string {
