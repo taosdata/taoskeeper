@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -42,7 +43,16 @@ func InitConfig() *Config {
 	viper.SetConfigName(Name)
 	viper.AddConfigPath("/etc/taos")
 
-	cp := pflag.StringP("c", "c", "", "taoskeeper config file")
+	var cp *string
+	switch runtime.GOOS {
+	case "windows":
+		viper.AddConfigPath(fmt.Sprintf("C:\\%s\\cfg", Name))
+		cp = pflag.StringP("c", "c", "", fmt.Sprintf("config path default C:\\%s\\cfg\\%s.toml", "TDengine", Name))
+	default:
+		viper.AddConfigPath(fmt.Sprintf("/etc/%s", Name))
+		cp = pflag.StringP("c", "c", "", fmt.Sprintf("config path default /etc/%s/%s.toml", "taos", Name))
+	}
+
 	v := pflag.BoolP("version", "V", false, "Print the version and exit")
 	help := pflag.BoolP("help", "h", false, "Print this help message and exit")
 	pflag.Parse()
