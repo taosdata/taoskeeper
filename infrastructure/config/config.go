@@ -46,10 +46,10 @@ func InitConfig() *Config {
 	var cp *string
 	switch runtime.GOOS {
 	case "windows":
-		viper.AddConfigPath(fmt.Sprintf("C:\\%s\\cfg", Name))
+		viper.AddConfigPath("C:\\TDengine\\cfg")
 		cp = pflag.StringP("c", "c", "", fmt.Sprintf("config path default C:\\%s\\cfg\\%s.toml", "TDengine", Name))
 	default:
-		viper.AddConfigPath(fmt.Sprintf("/etc/%s", Name))
+		viper.AddConfigPath("/etc/taos")
 		cp = pflag.StringP("c", "c", "", fmt.Sprintf("config path default /etc/%s/%s.toml", "taos", Name))
 	}
 
