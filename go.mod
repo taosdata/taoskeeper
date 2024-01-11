@@ -6,6 +6,7 @@ require (
 	github.com/BurntSushi/toml v0.4.1
 	github.com/gin-gonic/gin v1.9.1
 	github.com/influxdata/telegraf v1.23.3
+	github.com/kardianos/service v1.2.1
 	github.com/panjf2000/ants/v2 v2.4.6
 	github.com/prometheus/client_golang v1.12.2
 	github.com/shirou/gopsutil/v3 v3.22.4
@@ -14,6 +15,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.8.3
+	github.com/sunpe/gobox v0.0.0-20230901031353-872832a5033c
 	github.com/taosdata/driver-go/v3 v3.1.0
 	github.com/taosdata/go-utils v0.0.0-20211022070036-018cc5f2432a
 )
@@ -115,6 +117,7 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.9.0 // indirect
+	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
