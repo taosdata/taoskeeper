@@ -198,9 +198,9 @@ func initLog() {
 	_ = viper.BindEnv("log.rotationTime", "TAOS_KEEPER_LOG_ROTATION_TIME")
 	pflag.Duration("log.rotationTime", time.Hour*24, `log rotation time. Env "TAOS_KEEPER_LOG_ROTATION_TIME"`)
 
-	viper.SetDefault("log.rotationSize", "100MB")
+	viper.SetDefault("log.rotationSize", "100000000")
 	_ = viper.BindEnv("log.rotationSize", "TAOS_KEEPER_LOG_ROTATION_SIZE")
-	pflag.String("log.rotationSize", "100MB", `log rotation size(KB MB GB), must be a positive integer. Env "TAOS_KEEPER_LOG_ROTATION_SIZE"`)
+	pflag.String("log.rotationSize", "100000000", `log rotation size(KB MB GB), must be a positive integer. Env "TAOS_KEEPER_LOG_ROTATION_SIZE"`)
 }
 
 func (l *Log) setValue() {
