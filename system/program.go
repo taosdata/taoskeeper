@@ -22,7 +22,9 @@ var logger = log.GetLogger("program")
 
 func Init() *http.Server {
 	conf := config.InitConfig()
+	log.ConfigLog()
 	router := web.CreateRouter(conf.Debug, &conf.Cors, false)
+
 	reporter := api.NewReporter(conf)
 	reporter.Init(router)
 	monitor.StartMonitor("", conf, reporter)
@@ -84,23 +86,11 @@ func (p *program) Start(s service.Service) error {
 	}
 
 	server := p.server
-	// shutdown := make(chan struct{})
-	// go func() {
-	// 	defer close(shutdown)
-	// 	quit := make(chan os.Signal, 1)
-	// 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	// 	<-quit
-
-	// 	timeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// 	defer cancel()
-	// 	if err := server.Shutdown(timeoutCtx); err != nil {
-	// 		logger.Error("taoskeeper shutdown error ", err)
-	// 	}
-	// }()
-
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		panic(fmt.Errorf("taoskeeper start up fail! %v", err))
-	}
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			panic(fmt.Errorf("taoskeeper start up fail! %v", err))
+		}
+	}()
 	return nil
 }
 
@@ -108,11 +98,10 @@ func (p *program) Stop(s service.Service) error {
 	logger.Println("Shutdown WebServer ...")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	go func() {
-		if err := p.server.Shutdown(ctx); err != nil {
-			logger.Println("WebServer Shutdown error:", err)
-		}
-	}()
+
+	if err := p.server.Shutdown(ctx); err != nil {
+		logger.Println("WebServer Shutdown error:", err)
+	}
 
 	logger.Println("Server exiting")
 	return nil

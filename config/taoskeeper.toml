@@ -46,3 +46,8 @@ incgroup = false
 name = "audit"
 [audit.database.options]
 cachemodel = "none"
+
+[log]
+rotationCount = 5
+rotationTime = "24h"
+rotationSize = 100000000

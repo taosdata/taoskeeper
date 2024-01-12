@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"github.com/taosdata/taoskeeper/infrastructure/log"
+	"github.com/taosdata/go-utils/web"
 	"github.com/taosdata/taoskeeper/util/pool"
 	"github.com/taosdata/taoskeeper/version"
-
-	"github.com/taosdata/go-utils/web"
 )
 
 var Name = "taoskeeper"
@@ -29,6 +28,7 @@ type Config struct {
 	Metrics          MetricsConfig   `toml:"metrics"`
 	Env              Environment     `toml:"environment"`
 	Audit            AuditConfig     `toml:"audit"`
+	Log              Log             `toml:"log"`
 }
 
 type TDengineRestful struct {
@@ -38,6 +38,10 @@ type TDengineRestful struct {
 	Password string `toml:"password"`
 }
 
+var (
+	Conf *Config
+)
+
 func InitConfig() *Config {
 	viper.SetConfigType("toml")
 	viper.SetConfigName(Name)
@@ -46,11 +50,11 @@ func InitConfig() *Config {
 	var cp *string
 	switch runtime.GOOS {
 	case "windows":
-		viper.AddConfigPath("C:\\TDengine\\cfg")
-		cp = pflag.StringP("c", "c", "", fmt.Sprintf("config path default C:\\%s\\cfg\\%s.toml", "TDengine", Name))
+		viper.AddConfigPath(fmt.Sprintf("C:\\%s\\cfg", version.CUS_NAME))
+		cp = pflag.StringP("config", "c", "", fmt.Sprintf("config path default C:\\%s\\cfg\\%s.toml", version.CUS_NAME, Name))
 	default:
-		viper.AddConfigPath("/etc/taos")
-		cp = pflag.StringP("c", "c", "", fmt.Sprintf("config path default /etc/%s/%s.toml", "taos", Name))
+		viper.AddConfigPath(fmt.Sprintf("/etc/%s", version.CUS_PROMPT))
+		cp = pflag.StringP("config", "c", "", fmt.Sprintf("config path default /etc/%s/%s.toml", version.CUS_PROMPT, Name))
 	}
 
 	v := pflag.BoolP("version", "V", false, "Print the version and exit")
@@ -109,8 +113,8 @@ ReadConfig:
 
 	conf.Cors.Init()
 	pool.Init(conf.GoPoolSize)
-	log.Init(conf.LogLevel)
-
+	conf.Log.setValue()
+	Conf = &conf
 	return &conf
 }
 
@@ -170,4 +174,38 @@ func init() {
 	viper.SetDefault("environment.incgroup", false)
 	_ = viper.BindEnv("environment.incgroup", "TAOS_KEEPER_ENVIRONMENT_INCGROUP")
 	pflag.Bool("environment.incgroup", false, `whether running in cgroup. Env "TAOS_KEEPER_ENVIRONMENT_INCGROUP"`)
+
+	initLog()
+}
+
+func initLog() {
+	switch runtime.GOOS {
+	case "windows":
+		viper.SetDefault("log.path", fmt.Sprintf("C:\\%s\\log", version.CUS_NAME))
+		_ = viper.BindEnv("log.path", "TAOS_KEEPER_LOG_PATH")
+		pflag.String("log.path", fmt.Sprintf("C:\\%s\\log", version.CUS_NAME), `log path. Env "TAOS_KEEPER_LOG_PATH"`)
+	default:
+		viper.SetDefault("log.path", fmt.Sprintf("/var/log/%s", version.CUS_PROMPT))
+		_ = viper.BindEnv("log.path", "TAOS_KEEPER_LOG_PATH")
+		pflag.String("log.path", fmt.Sprintf("/var/log/%s", version.CUS_PROMPT), `log path. Env "TAOS_KEEPER_LOG_PATH"`)
+	}
+
+	viper.SetDefault("log.rotationCount", 5)
+	_ = viper.BindEnv("log.rotationCount", "TAOS_KEEPER_LOG_ROTATION_COUNT")
+	pflag.Uint("log.rotationCount", 5, `log rotation count. Env "TAOS_KEEPER_LOG_ROTATION_COUNT"`)
+
+	viper.SetDefault("log.rotationTime", time.Hour*24)
+	_ = viper.BindEnv("log.rotationTime", "TAOS_KEEPER_LOG_ROTATION_TIME")
+	pflag.Duration("log.rotationTime", time.Hour*24, `log rotation time. Env "TAOS_KEEPER_LOG_ROTATION_TIME"`)
+
+	viper.SetDefault("log.rotationSize", "100MB")
+	_ = viper.BindEnv("log.rotationSize", "TAOS_KEEPER_LOG_ROTATION_SIZE")
+	pflag.String("log.rotationSize", "100MB", `log rotation size(KB MB GB), must be a positive integer. Env "TAOS_KEEPER_LOG_ROTATION_SIZE"`)
+}
+
+func (l *Log) setValue() {
+	l.Path = viper.GetString("log.path")
+	l.RotationCount = viper.GetUint("log.rotationCount")
+	l.RotationTime = viper.GetDuration("log.rotationTime")
+	l.RotationSize = viper.GetUint("log.rotationSize")
 }
