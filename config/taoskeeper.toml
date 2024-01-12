@@ -48,6 +48,7 @@ name = "audit"
 cachemodel = "none"
 
 [log]
+#path = "/var/log/taos"
 rotationCount = 5
 rotationTime = "24h"
 rotationSize = 100000000
