@@ -46,3 +46,9 @@ incgroup = false
 name = "audit"
 [audit.database.options]
 cachemodel = "none"
+
+[log]
+#path = "/var/log/taos"
+rotationCount = 5
+rotationTime = "24h"
+rotationSize = 100000000

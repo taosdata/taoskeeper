@@ -5,7 +5,9 @@ go 1.18
 require (
 	github.com/BurntSushi/toml v0.4.1
 	github.com/gin-gonic/gin v1.9.1
+	github.com/huskar-t/file-rotatelogs/v2 v2.4.1
 	github.com/influxdata/telegraf v1.23.3
+	github.com/kardianos/service v1.2.1
 	github.com/panjf2000/ants/v2 v2.4.6
 	github.com/prometheus/client_golang v1.12.2
 	github.com/shirou/gopsutil/v3 v3.22.4
@@ -73,6 +75,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
+	github.com/lestrrat-go/strftime v0.0.0-20180821113735-8b31f9c59b0f // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
@@ -90,6 +93,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/philhofer/fwd v1.1.1 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
