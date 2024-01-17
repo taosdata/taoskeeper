@@ -113,7 +113,7 @@ ReadConfig:
 
 	conf.Cors.Init()
 	pool.Init(conf.GoPoolSize)
-	conf.Log.setValue()
+	conf.Log.SetValue()
 	Conf = &conf
 	return &conf
 }
@@ -203,7 +203,7 @@ func initLog() {
 	pflag.String("log.rotationSize", "100000000", `log rotation size(KB MB GB), must be a positive integer. Env "TAOS_KEEPER_LOG_ROTATION_SIZE"`)
 }
 
-func (l *Log) setValue() {
+func (l *Log) SetValue() {
 	l.Path = viper.GetString("log.path")
 	l.RotationCount = viper.GetUint("log.rotationCount")
 	l.RotationTime = viper.GetDuration("log.rotationTime")

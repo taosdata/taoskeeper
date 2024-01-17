@@ -19,10 +19,6 @@ port = 6041
 username = "root"
 password = "taosdata"
 
-# list of adapter that need to be monitored
-[taosAdapter]
-address = ["127.0.0.1:6041"]
-
 [metrics]
 # metrics prefix in metrics names.
 prefix = "taos"
