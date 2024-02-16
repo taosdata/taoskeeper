@@ -1,24 +1,38 @@
 package api
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
-	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
 )
 
 var gmLogger = log.GetLogger("gen_metric")
 
+type ColumnSeq struct {
+	tagNames    []string
+	metricNames []string
+}
+
+var (
+	mu            sync.RWMutex
+	gColumnSeqMap = make(map[string]ColumnSeq)
+)
+
 type GeneralMetric struct {
 	client   *http.Client
+	conn     *db.Connector
 	username string
 	password string
 	host     string
@@ -53,10 +67,39 @@ type StableArrayInfo struct {
 	Tables   []StableInfo `json:"tables"`
 }
 
-func (a *GeneralMetric) Init(c gin.IRouter) error {
-	c.POST("/general-metric", a.handleFunc())
-	c.POST("/taosd-cluster-basic", a.handlTaosdClusterBasic())
-	return nil
+type ClusterBasic struct {
+	ClusterId       string `json:"cluster_id"`
+	Ts              string `json:"ts"`
+	FirstEp         string `json:"first_ep"`
+	FirstEpDnodeId  int32  `json:"first_ep_dnode_id"`
+	Version         string `json:"version"`
+	MonitorInterval int32  `json:"monitor_interval"`
+}
+
+func (gm *GeneralMetric) Init(c gin.IRouter) error {
+	c.POST("/general-metric", gm.handleFunc())
+	c.POST("/taosd-cluster-basic", gm.handleTaosdClusterBasic())
+
+	conn, err := db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database)
+	if err != nil {
+		gmLogger.Error("## init db connect error", "error", err)
+		return err
+	}
+	gm.conn = conn
+
+	err = gm.createSTables()
+	if err != nil {
+		gmLogger.Error("## create stable error", "error", err)
+		return err
+	}
+
+	err = gm.initColumnSeqMap()
+	if err != nil {
+		gmLogger.Error("## init  gColumnSeqMap error", "error", err)
+		return err
+	}
+
+	return err
 }
 
 func NewGeneralMetric(conf *config.Config) *GeneralMetric {
@@ -85,15 +128,15 @@ func NewGeneralMetric(conf *config.Config) *GeneralMetric {
 			Scheme:   "http",
 			Host:     fmt.Sprintf("%s:%d", conf.TDengine.Host, conf.TDengine.Port),
 			Path:     "/influxdb/v1/write",
-			RawQuery: fmt.Sprintf("db=%s", conf.Metrics.Database),
+			RawQuery: fmt.Sprintf("db=%s&precision=ms", conf.Metrics.Database),
 		},
 	}
 	return imp
 }
 
-func (imp *GeneralMetric) handleFunc() gin.HandlerFunc {
+func (gm *GeneralMetric) handleFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if imp.client == nil {
+		if gm.client == nil {
 			gmLogger.Error("no connection")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "no connection"})
 			return
@@ -105,9 +148,10 @@ func (imp *GeneralMetric) handleFunc() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get general metric data error. %s", err)})
 			return
 		}
-		gmLogger.Trace("## receive general metric data", "data", data)
 
 		var request []StableArrayInfo
+
+		//gmLogger.Error("## data: ", string(data))
 
 		if err := json.Unmarshal(data, &request); err != nil {
 			gmLogger.WithError(err).Errorf("## parse general metric data %s error", string(data))
@@ -120,7 +164,7 @@ func (imp *GeneralMetric) handleFunc() gin.HandlerFunc {
 			return
 		}
 
-		err = imp.handleBatchMetrics(request)
+		err = gm.handleBatchMetrics(request)
 
 		if err != nil {
 			gmLogger.WithError(err).Errorf("## process records error")
@@ -132,65 +176,60 @@ func (imp *GeneralMetric) handleFunc() gin.HandlerFunc {
 	}
 }
 
-func (imp *GeneralMetric) handleBatchMetrics(request []StableArrayInfo) error {
-	var builder strings.Builder
+func (gm *GeneralMetric) handleBatchMetrics(request []StableArrayInfo) error {
+	var buf bytes.Buffer
 
 	for _, stableArrayInfo := range request {
 		if stableArrayInfo.Ts == "" {
-			// log err
+			gmLogger.Error("ts data is empty")
 			continue
 		}
 
 		for _, table := range stableArrayInfo.Tables {
 			if table.Name == "" {
-				// log err
+				gmLogger.Error("stable name is empty")
 				continue
+			}
+			if _, ok := Load(table.Name); !ok {
+				Init(table.Name)
 			}
 
 			for _, metricGroup := range table.MetricGroups {
-				builder.WriteString(table.Name)
-
-				for _, tag := range metricGroup.Tags {
-					line := fmt.Sprintf(",%s=%s", tag.Name, tag.Value)
-					builder.WriteString(line)
-				}
-				builder.WriteString(" ")
-
-				for i, metric := range metricGroup.Metrics {
-					line := fmt.Sprintf("%s=%ff64", metric.Name, metric.Value)
-					builder.WriteString(line)
-					if i != len(metricGroup.Metrics)-1 {
-						builder.WriteString(",")
-					}
-				}
-
-				builder.WriteString(" ")
-				builder.WriteString(stableArrayInfo.Ts)
-				builder.WriteString("\n")
+				buf.WriteString(table.Name)
+				writeTags(metricGroup.Tags, table.Name, &buf)
+				buf.WriteString(" ")
+				writeMetrics(metricGroup.Metrics, table.Name, &buf)
+				buf.WriteString(" ")
+				buf.WriteString(stableArrayInfo.Ts)
+				buf.WriteString("\n")
 			}
 		}
 	}
 
-	return imp.lineWriteBody(builder.String())
+	if buf.Len() > 0 {
+		gmLogger.Errorf("## buf: %v", buf.String())
+		return gm.lineWriteBody(buf)
+	}
+	return nil
 }
 
-func (imp *GeneralMetric) lineWriteBody(data string) error {
+func (gm *GeneralMetric) lineWriteBody(buf bytes.Buffer) error {
 	header := map[string][]string{
 		"Connection": {"keep-alive"},
 	}
 	req := &http.Request{
 		Method:     http.MethodPost,
-		URL:        imp.url,
+		URL:        gm.url,
 		Proto:      "HTTP/1.1",
 		ProtoMajor: 1,
 		ProtoMinor: 1,
 		Header:     header,
-		Host:       imp.url.Host,
+		Host:       gm.url.Host,
 	}
-	req.SetBasicAuth(imp.username, imp.password)
+	req.SetBasicAuth(gm.username, gm.password)
 
-	req.Body = io.NopCloser(strings.NewReader(data))
-	resp, err := imp.client.Do(req)
+	req.Body = io.NopCloser(&buf)
+	resp, err := gm.client.Do(req)
 
 	if err != nil {
 		gmLogger.Errorf("writing metrics exception: %v", err)
@@ -198,13 +237,211 @@ func (imp *GeneralMetric) lineWriteBody(data string) error {
 	}
 
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("unexpected status code %d:body:%s", resp.StatusCode, string(body))
 	}
 	return nil
 }
 
-func (imp *GeneralMetric) handlTaosdClusterBasic() gin.HandlerFunc {
+func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if gm.conn == nil {
+			gmLogger.Error("no connection")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "no connection"})
+			return
+		}
+
+		data, err := c.GetRawData()
+		if err != nil {
+			gmLogger.WithError(err).Errorf("## get taosd cluster basic data error")
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get general metric data error. %s", err)})
+			return
+		}
+		gmLogger.Trace("## receive taosd cluster basic data: ", data)
+
+		var request ClusterBasic
+
+		if err := json.Unmarshal(data, &request); err != nil {
+			gmLogger.WithError(err).Errorf("## parse general metric data %s error", string(data))
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse general metric data error: %s", err)})
+			return
+		}
+
+		sql := fmt.Sprintf(
+			"insert into %s.taosd_cluster_basic_%s using taosd_cluster_basic tags ('%s') values (%s, '%s', %d, '%s', %d) ",
+			gm.database, request.ClusterId, request.ClusterId, request.Ts, request.FirstEp, request.FirstEpDnodeId, request.Version, request.MonitorInterval)
+
+		if _, err = gm.conn.Exec(context.Background(), sql); err != nil {
+			gmLogger.WithError(err).Errorf("## insert taosd_cluster_basic error")
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("insert taosd_cluster_basic error. %s", err)})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{})
+	}
+}
+
+func writeTags(tags []Tag, stbName string, buf *bytes.Buffer) {
+	var nameArray []string
+	if columnSeq, ok := Load(stbName); ok {
+		if len(columnSeq.tagNames) < len(tags) {
+			// add column, only schema change will hit here
+			for _, tag := range tags {
+				if !contains(columnSeq.metricNames, tag.Name) {
+					columnSeq.tagNames = append(columnSeq.tagNames, tag.Name)
+				}
+			}
+			Store(stbName, columnSeq)
+		}
+		nameArray = columnSeq.tagNames
+	}
+
+	// 将 Tag 切片转换为 map
+	tagMap := make(map[string]string)
+	for _, tag := range tags {
+		tagMap[tag.Name] = tag.Value
+	}
+
+	for _, name := range nameArray {
+		if value, ok := tagMap[name]; ok {
+			buf.WriteString(fmt.Sprintf(",%s=%s", name, value))
+		}
+	}
+}
+
+func contains(array []string, item string) bool {
+	for _, value := range array {
+		if value == item {
+			return true
+		}
+	}
+	return false
+}
+
+func writeMetrics(metrics []Metric, stbName string, buf *bytes.Buffer) {
+	var nameArray []string
+	if columnSeq, ok := Load(stbName); ok {
+		if len(columnSeq.metricNames) < len(metrics) {
+			// add column, only schema change will hit here
+			for _, metric := range metrics {
+				if !contains(columnSeq.metricNames, metric.Name) {
+					columnSeq.metricNames = append(columnSeq.metricNames, metric.Name)
+				}
+			}
+			Store(stbName, columnSeq)
+		}
+		nameArray = columnSeq.metricNames
+	}
+
+	// 将 Metric 切片转换为 map
+	metricMap := make(map[string]float64)
+	for _, metric := range metrics {
+		metricMap[metric.Name] = metric.Value
+	}
+
+	for i, name := range nameArray {
+		if value, ok := metricMap[name]; ok {
+			buf.WriteString(fmt.Sprintf("%s=%ff64", name, value))
+		}
+		if i != len(nameArray)-1 {
+			buf.WriteString(",")
+		}
+	}
+}
+
+// 存储数据
+func Store(key string, value ColumnSeq) {
+	mu.Lock()
+	defer mu.Unlock()
+	gColumnSeqMap[key] = value
+}
+
+// 加载数据
+func Load(key string) (ColumnSeq, bool) {
+	mu.RLock()
+	defer mu.RUnlock()
+	value, ok := gColumnSeqMap[key]
+	return value, ok
+}
+
+// 初始化单表的列序列
+func Init(key string) {
+	mu.Lock()
+	defer mu.Unlock()
+	if _, ok := gColumnSeqMap[key]; !ok {
+		columnSeq := ColumnSeq{
+			tagNames:    []string{},
+			metricNames: []string{},
+		}
+		gColumnSeqMap[key] = columnSeq
+	}
+}
+
+// 初始化所有列序列
+func (gm *GeneralMetric) initColumnSeqMap() error {
+	query := fmt.Sprintf(`
+    select stable_name
+    from information_schema.ins_stables
+    where db_name = '%s'
+    and (
+        stable_name like 'taos_%%'
+        or stable_name like 'taosd_%%'
+        or stable_name like 'taosx_%%'
+    )
+    order by stable_name asc;
+	`, gm.database)
+
+	data, err := gm.conn.Query(context.Background(), query)
+
+	if err != nil {
+		return err
+	}
+
+	//get all stables, then init gColumnSeqMap
+	for _, row := range data.Data {
+		stableName := row[0].(string)
+		Init(stableName)
+	}
+	//set gColumnSeqMap with desc stables
+	for tableName, columnSeq := range gColumnSeqMap {
+		data, err := gm.conn.Query(context.Background(), fmt.Sprintf(`desc %s.%s;`, gm.database, tableName))
+
+		if err != nil {
+			return err
+		}
+
+		gmLogger.Errorf("## data: %v", data)
+
+		if len(data.Data) < 1 || len(data.Data[0]) < 4 {
+			return fmt.Errorf("desc %s.%s error", gm.database, tableName)
+		}
+
+		for i, row := range data.Data {
+			if i == 0 {
+				continue
+			}
+
+			if row[3].(string) == "TAG" {
+				columnSeq.tagNames = append(columnSeq.tagNames, row[0].(string))
+			} else {
+				columnSeq.metricNames = append(columnSeq.metricNames, row[0].(string))
+			}
+		}
+		Store(tableName, columnSeq)
+	}
+
+	gmLogger.Errorf("## gColumnSeqMap: %v", gColumnSeqMap)
 	return nil
+}
+
+func (gm *GeneralMetric) createSTables() error {
+	var createTableSql = "create stable if not exists taosd_cluster_basic " +
+		"(ts timestamp, first_ep varchar(100), first_ep_dnode_id INT, version varchar(20), monitor_interval int) " +
+		"tags (cluster_id varchar(50))"
+
+	if gm.conn == nil {
+		return noConnectionError
+	}
+	_, err := gm.conn.Exec(context.Background(), createTableSql)
+	return err
 }

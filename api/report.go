@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"strconv"
@@ -57,8 +56,8 @@ func NewReporter(conf *config.Config) *Reporter {
 
 func (r *Reporter) Init(c gin.IRouter) {
 	c.POST("report", r.handlerFunc())
-	r.createDatabase()
-	r.creatTables()
+	createDatabase(r.username, r.password, r.host, r.port, r.dbname, r.databaseOptions)
+	creatTables(r.username, r.password, r.host, r.port, r.dbname, createList)
 	// todo: it can delete in the future.
 	if r.shouldDetectFields() {
 		r.detectGrantInfoFieldType()
@@ -80,7 +79,7 @@ func (r *Reporter) detectGrantInfoFieldType() {
 	// `expire_time` `timeseries_used` `timeseries_total` in table `grant_info` changed to bigint from TS-3003.
 	ctx := context.Background()
 	conn := r.getConn()
-	defer r.closeConn(conn)
+	defer closeConn(conn)
 
 	r.detectFieldType(ctx, conn, "grants_info", "expire_time", "bigint")
 	r.detectFieldType(ctx, conn, "grants_info", "timeseries_used", "bigint")
@@ -91,7 +90,7 @@ func (r *Reporter) detectClusterInfoFieldType() {
 	// `tbs_total` in table `cluster_info` changed to bigint from TS-3003.
 	ctx := context.Background()
 	conn := r.getConn()
-	defer r.closeConn(conn)
+	defer closeConn(conn)
 
 	r.detectFieldType(ctx, conn, "cluster_info", "tbs_total", "bigint")
 
@@ -110,7 +109,7 @@ func (r *Reporter) detectVgroupsInfoType() {
 	// `tables_num` in table `vgroups_info` changed to bigint from TS-3003.
 	ctx := context.Background()
 	conn := r.getConn()
-	defer r.closeConn(conn)
+	defer closeConn(conn)
 
 	r.detectFieldType(ctx, conn, "vgroups_info", "tables_num", "bigint")
 }
@@ -130,7 +129,7 @@ func (r *Reporter) detectFieldType(ctx context.Context, conn *db.Connector, tabl
 func (r *Reporter) shouldDetectFields() bool {
 	ctx := context.Background()
 	conn := r.getConn()
-	defer r.closeConn(conn)
+	defer closeConn(conn)
 
 	version, err := r.serverVersion(ctx, conn)
 	if err != nil {
@@ -214,62 +213,6 @@ func (r *Reporter) addColumn(ctx context.Context, conn *db.Connector, table stri
 	}
 }
 
-func (r *Reporter) createDatabase() {
-	ctx := context.Background()
-	conn := r.getConn()
-	defer r.closeConn(conn)
-
-	createDBSql := r.generateCreateDBSql()
-	logger.Warningf("create database sql: %s", createDBSql)
-
-	if _, err := conn.Exec(ctx, createDBSql); err != nil {
-		logger.WithError(err).Errorf("create database %s error %v", r.dbname, err)
-		panic(err)
-	}
-}
-
-func (r *Reporter) generateCreateDBSql() string {
-	var buf bytes.Buffer
-	buf.WriteString("create database if not exists ")
-	buf.WriteString(r.dbname)
-
-	for k, v := range r.databaseOptions {
-		buf.WriteString(" ")
-		buf.WriteString(k)
-		switch v := v.(type) {
-		case string:
-			buf.WriteString(fmt.Sprintf(" '%s'", v))
-		default:
-			buf.WriteString(fmt.Sprintf(" %v", v))
-		}
-		buf.WriteString(" ")
-	}
-	return buf.String()
-}
-
-func (r *Reporter) creatTables() {
-	ctx := context.Background()
-	conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname)
-	if err != nil {
-		logger.WithError(err).Errorf("connect to database error")
-		return
-	}
-	defer r.closeConn(conn)
-
-	for _, createSql := range createList {
-		logger.Infof("execute sql: %s", createSql)
-		if _, err = conn.Exec(ctx, createSql); err != nil {
-			logger.Errorf("execute sql: %s, error: %s", createSql, err)
-		}
-	}
-}
-
-func (r *Reporter) closeConn(conn *db.Connector) {
-	if err := conn.Close(); err != nil {
-		logger.WithError(err).Errorf("close connection error")
-	}
-}
-
 func (r *Reporter) handlerFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		r.recordTotalRep()
@@ -304,7 +247,7 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 			logger.WithError(err).Errorf("connect to database error")
 			return
 		}
-		defer r.closeConn(conn)
+		defer closeConn(conn)
 		ctx := context.Background()
 
 		for _, sql := range sqls {

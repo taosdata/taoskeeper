@@ -264,11 +264,11 @@ func (a *Audit) createDBSql() string {
 	return buf.String()
 }
 
-var createTableSql = "create stable if not exists operations " +
-	"(ts timestamp, user_name varchar(25), operation varchar(20), db varchar(65), resource varchar(193), client_address varchar(25), details varchar(50000)) " +
-	"tags (cluster_id varchar(64))"
-
 func (a *Audit) createSTables() error {
+	var createTableSql = "create stable if not exists operations " +
+		"(ts timestamp, user_name varchar(25), operation varchar(20), db varchar(65), resource varchar(193), client_address varchar(25), details varchar(50000)) " +
+		"tags (cluster_id varchar(64))"
+
 	if a.conn == nil {
 		return noConnectionError
 	}

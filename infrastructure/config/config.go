@@ -24,7 +24,6 @@ type Config struct {
 	GoPoolSize       int             `toml:"gopoolsize"`
 	RotationInterval string          `toml:"RotationInterval"`
 	TDengine         TDengineRestful `toml:"tdengine"`
-	TaosAdapter      TaosAdapter     `toml:"taosAdapter"`
 	Metrics          MetricsConfig   `toml:"metrics"`
 	Env              Environment     `toml:"environment"`
 	Audit            AuditConfig     `toml:"audit"`
