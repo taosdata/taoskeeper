@@ -342,9 +342,9 @@ func writeMetrics(metrics []Metric, stbName string, buf *bytes.Buffer) {
 	for i, name := range nameArray {
 		if value, ok := metricMap[name]; ok {
 			buf.WriteString(fmt.Sprintf("%s=%ff64", name, value))
-		}
-		if i != len(nameArray)-1 {
-			buf.WriteString(",")
+			if i != len(nameArray)-1 {
+				buf.WriteString(",")
+			}
 		}
 	}
 }
