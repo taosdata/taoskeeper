@@ -151,7 +151,7 @@ func (gm *GeneralMetric) handleFunc() gin.HandlerFunc {
 
 		var request []StableArrayInfo
 
-		//gmLogger.Error("## data: ", string(data))
+		gmLogger.Error("## data: ", string(data))
 
 		if err := json.Unmarshal(data, &request); err != nil {
 			gmLogger.WithError(err).Errorf("## parse general metric data %s error", string(data))
@@ -287,7 +287,7 @@ func writeTags(tags []Tag, stbName string, buf *bytes.Buffer) {
 		if len(columnSeq.tagNames) < len(tags) {
 			// add column, only schema change will hit here
 			for _, tag := range tags {
-				if !contains(columnSeq.metricNames, tag.Name) {
+				if !contains(columnSeq.tagNames, tag.Name) {
 					columnSeq.tagNames = append(columnSeq.tagNames, tag.Name)
 				}
 			}
