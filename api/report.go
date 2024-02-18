@@ -57,7 +57,10 @@ func NewReporter(conf *config.Config) *Reporter {
 func (r *Reporter) Init(c gin.IRouter) {
 	c.POST("report", r.handlerFunc())
 	createDatabase(r.username, r.password, r.host, r.port, r.dbname, r.databaseOptions)
-	creatTables(r.username, r.password, r.host, r.port, r.dbname, createList)
+	if len(createList) == 0 {
+		creatTables(r.username, r.password, r.host, r.port, r.dbname, createList)
+	}
+
 	// todo: it can delete in the future.
 	if r.shouldDetectFields() {
 		r.detectGrantInfoFieldType()

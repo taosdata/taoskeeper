@@ -72,7 +72,7 @@ type ClusterBasic struct {
 	Ts              string `json:"ts"`
 	FirstEp         string `json:"first_ep"`
 	FirstEpDnodeId  int32  `json:"first_ep_dnode_id"`
-	Version         string `json:"version"`
+	Version         string `json:"cluster_version"`
 	MonitorInterval int32  `json:"monitor_interval"`
 }
 
