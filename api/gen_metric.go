@@ -72,7 +72,7 @@ type ClusterBasic struct {
 	Ts              string `json:"ts"`
 	FirstEp         string `json:"first_ep"`
 	FirstEpDnodeId  int32  `json:"first_ep_dnode_id"`
-	Version         string `json:"cluster_version"`
+	ClusterVersion  string `json:"cluster_version"`
 	MonitorInterval int32  `json:"monitor_interval"`
 }
 
@@ -270,7 +270,7 @@ func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
 
 		sql := fmt.Sprintf(
 			"insert into %s.taosd_cluster_basic_%s using taosd_cluster_basic tags ('%s') values (%s, '%s', %d, '%s', %d) ",
-			gm.database, request.ClusterId, request.ClusterId, request.Ts, request.FirstEp, request.FirstEpDnodeId, request.Version, request.MonitorInterval)
+			gm.database, request.ClusterId, request.ClusterId, request.Ts, request.FirstEp, request.FirstEpDnodeId, request.ClusterVersion, request.MonitorInterval)
 
 		if _, err = gm.conn.Exec(context.Background(), sql); err != nil {
 			gmLogger.WithError(err).Errorf("## insert taosd_cluster_basic error")
@@ -436,7 +436,7 @@ func (gm *GeneralMetric) initColumnSeqMap() error {
 
 func (gm *GeneralMetric) createSTables() error {
 	var createTableSql = "create stable if not exists taosd_cluster_basic " +
-		"(ts timestamp, first_ep varchar(100), first_ep_dnode_id INT, version varchar(20), monitor_interval int) " +
+		"(ts timestamp, first_ep varchar(100), first_ep_dnode_id INT, cluster_version varchar(20), monitor_interval int) " +
 		"tags (cluster_id varchar(50))"
 
 	if gm.conn == nil {
