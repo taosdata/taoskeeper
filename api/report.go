@@ -16,17 +16,17 @@ import (
 var logger = log.GetLogger("report")
 
 var createList = []string{
-	CreateClusterInfoSql,
-	CreateDnodeSql,
-	CreateMnodeSql,
-	CreateDnodeInfoSql,
-	CreateDataDirSql,
-	CreateLogDirSql,
-	CreateTempDirSql,
-	CreateVgroupsInfoSql,
-	CreateVnodeRoleSql,
-	CreateSummarySql,
-	CreateGrantInfoSql,
+	// CreateClusterInfoSql,
+	// CreateDnodeSql,
+	// CreateMnodeSql,
+	// CreateDnodeInfoSql,
+	// CreateDataDirSql,
+	// CreateLogDirSql,
+	// CreateTempDirSql,
+	// CreateVgroupsInfoSql,
+	// CreateVnodeRoleSql,
+	// CreateSummarySql,
+	// CreateGrantInfoSql,
 	CreateKeeperSql,
 }
 
@@ -56,9 +56,7 @@ func NewReporter(conf *config.Config) *Reporter {
 func (r *Reporter) Init(c gin.IRouter) {
 	c.POST("report", r.handlerFunc())
 	createDatabase(r.username, r.password, r.host, r.port, r.dbname, r.databaseOptions)
-	if len(createList) == 0 {
-		creatTables(r.username, r.password, r.host, r.port, r.dbname, createList)
-	}
+	creatTables(r.username, r.password, r.host, r.port, r.dbname, createList)
 }
 
 func (r *Reporter) handlerFunc() gin.HandlerFunc {
