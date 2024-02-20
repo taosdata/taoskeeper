@@ -37,6 +37,23 @@ func TestMain(m *testing.M) {
 	router = gin.New()
 	reporter := NewReporter(conf)
 	reporter.Init(router)
+
+	var createList = []string{
+		CreateClusterInfoSql,
+		CreateDnodeSql,
+		CreateMnodeSql,
+		CreateDnodeInfoSql,
+		CreateDataDirSql,
+		CreateLogDirSql,
+		CreateTempDirSql,
+		CreateVgroupsInfoSql,
+		CreateVnodeRoleSql,
+		CreateSummarySql,
+		CreateGrantInfoSql,
+		CreateKeeperSql,
+	}
+	creatTables(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.Metrics.Database, createList)
+
 	processor := process.NewProcessor(conf)
 	node := NewNodeExporter(processor)
 	node.Init(router)

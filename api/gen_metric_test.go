@@ -31,7 +31,7 @@ func TestClusterBasic(t *testing.T) {
 		name:   "1",
 		tbname: "taosd_cluster_basic",
 		ts:     1705655770381,
-		data:   `{"ts":"1705655770381","cluster_id":"7648966395564416484","protocol":2,"first_ep":"ssfood06:6130","first_ep_dnode_id":1,"version":"3.2.1.0.alp","monitor_interval":1}`,
+		data:   `{"ts":"1705655770381","cluster_id":"7648966395564416484","protocol":2,"first_ep":"ssfood06:6130","first_ep_dnode_id":1,"cluster_version":"3.2.1.0.alp","monitor_interval":1}`,
 		expect: "7648966395564416484",
 	}
 
@@ -182,26 +182,3 @@ func TestGenMetric(t *testing.T) {
 		}
 	})
 }
-
-// func setup(t *testing.T) {
-// 	cfg := getCfg()
-
-// 	createDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.Metrics.Database, cfg.Metrics.DatabaseOptions)
-
-// 	gm := NewGeneralMetric(cfg)
-// 	err := gm.Init(router)
-// 	assert.NoError(t, err)
-
-// 	fmt.Println("Before all tests")
-// }
-
-// func teardown(t *testing.T) {
-// 	fmt.Println("After all tests")
-// }
-
-// func TestMain(t *testing.T) {
-// 	setup(t)
-// 	code := t.Run()
-// 	teardown(t)
-// 	os.Exit(code)
-// }
