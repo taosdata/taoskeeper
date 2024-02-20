@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
@@ -151,7 +152,9 @@ func (gm *GeneralMetric) handleFunc() gin.HandlerFunc {
 
 		var request []StableArrayInfo
 
-		gmLogger.Error("## data: ", string(data))
+		if gmLogger.Level >= logrus.TraceLevel {
+			gmLogger.Trace("## data: ", string(data))
+		}
 
 		if err := json.Unmarshal(data, &request); err != nil {
 			gmLogger.WithError(err).Errorf("## parse general metric data %s error", string(data))
@@ -207,7 +210,9 @@ func (gm *GeneralMetric) handleBatchMetrics(request []StableArrayInfo) error {
 	}
 
 	if buf.Len() > 0 {
-		gmLogger.Errorf("## buf: %v", buf.String())
+		if gmLogger.Level >= logrus.TraceLevel {
+			gmLogger.Tracef("## buf: %v", buf.String())
+		}
 		return gm.lineWriteBody(buf)
 	}
 	return nil
@@ -258,7 +263,9 @@ func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get general metric data error. %s", err)})
 			return
 		}
-		gmLogger.Trace("## receive taosd cluster basic data: ", data)
+		if gmLogger.Level >= logrus.TraceLevel {
+			gmLogger.Trace("## receive taosd cluster basic data: ", string(data))
+		}
 
 		var request ClusterBasic
 
@@ -410,7 +417,7 @@ func (gm *GeneralMetric) initColumnSeqMap() error {
 			return err
 		}
 
-		gmLogger.Errorf("## data: %v", data)
+		gmLogger.Tracef("## data: %v", data)
 
 		if len(data.Data) < 1 || len(data.Data[0]) < 4 {
 			return fmt.Errorf("desc %s.%s error", gm.database, tableName)
@@ -430,7 +437,7 @@ func (gm *GeneralMetric) initColumnSeqMap() error {
 		Store(tableName, columnSeq)
 	}
 
-	gmLogger.Errorf("## gColumnSeqMap: %v", gColumnSeqMap)
+	gmLogger.Infof("## gColumnSeqMap: %v", gColumnSeqMap)
 	return nil
 }
 
