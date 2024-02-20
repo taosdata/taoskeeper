@@ -152,7 +152,7 @@ func (gm *GeneralMetric) handleFunc() gin.HandlerFunc {
 
 		var request []StableArrayInfo
 
-		if gmLogger.Level >= logrus.TraceLevel {
+		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
 			gmLogger.Trace("## data: ", string(data))
 		}
 
@@ -210,7 +210,7 @@ func (gm *GeneralMetric) handleBatchMetrics(request []StableArrayInfo) error {
 	}
 
 	if buf.Len() > 0 {
-		if gmLogger.Level >= logrus.TraceLevel {
+		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
 			gmLogger.Tracef("## buf: %v", buf.String())
 		}
 		return gm.lineWriteBody(buf)
@@ -263,7 +263,7 @@ func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get general metric data error. %s", err)})
 			return
 		}
-		if gmLogger.Level >= logrus.TraceLevel {
+		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
 			gmLogger.Trace("## receive taosd cluster basic data: ", string(data))
 		}
 
