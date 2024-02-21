@@ -31,7 +31,7 @@ func TestClusterBasic(t *testing.T) {
 		name:   "1",
 		tbname: "taosd_cluster_basic",
 		ts:     1705655770381,
-		data:   `{"ts":"1705655770381","cluster_id":"7648966395564416484","protocol":2,"first_ep":"ssfood06:6130","first_ep_dnode_id":1,"cluster_version":"3.2.1.0.alp","monitor_interval":1}`,
+		data:   `{"ts":"1705655770381","cluster_id":"7648966395564416484","protocol":2,"first_ep":"ssfood06:6130","first_ep_dnode_id":1,"cluster_version":"3.2.1.0.alp"}`,
 		expect: "7648966395564416484",
 	}
 
