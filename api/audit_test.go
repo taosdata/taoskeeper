@@ -22,18 +22,21 @@ func getCfg() *config.Config {
 			Username: "root",
 			Password: "taosdata",
 		},
+		Metrics: config.MetricsConfig{
+			Database: "keeper_test_log",
+		},
 		Audit: config.AuditConfig{
 			Database: config.Database{
-				Name: "audit",
+				Name: "keepter_test_audit",
 			},
 		},
 	}
 	return c
 }
 func TestAudit(t *testing.T) {
-	c := getCfg()
+	cfg := getCfg()
 
-	a, err := NewAudit(c)
+	a, err := NewAudit(cfg)
 	assert.NoError(t, err)
 	err = a.Init(router)
 	assert.NoError(t, err)
@@ -67,10 +70,10 @@ func TestAudit(t *testing.T) {
 		},
 	}
 
-	conn, err := db.NewConnectorWithDb(c.TDengine.Username, c.TDengine.Password, c.TDengine.Host, c.TDengine.Port, c.Audit.Database.Name)
+	conn, err := db.NewConnectorWithDb(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.Audit.Database.Name)
 	assert.NoError(t, err)
 	defer func() {
-		_, _ = conn.Query(context.Background(), "drop stable if exists audit.operations")
+		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", cfg.Audit.Database.Name))
 	}()
 
 	for _, c := range cases {
@@ -81,7 +84,7 @@ func TestAudit(t *testing.T) {
 			router.ServeHTTP(w, req)
 			assert.Equal(t, 200, w.Code)
 
-			data, err := conn.Query(context.Background(), fmt.Sprintf("select ts, details from audit.operations where ts=%d", c.ts))
+			data, err := conn.Query(context.Background(), fmt.Sprintf("select ts, details from %s.operations where ts=%d", cfg.Audit.Database.Name, c.ts))
 			assert.NoError(t, err)
 			assert.Equal(t, 1, len(data.Data))
 			assert.Equal(t, c.expect, data.Data[0][1])
@@ -109,7 +112,7 @@ func TestAudit(t *testing.T) {
 		router.ServeHTTP(w, req)
 		assert.Equal(t, 200, w.Code)
 
-		data, err := conn.Query(context.Background(), "select ts, details from audit.operations where cluster_id='8468922059162439502'")
+		data, err := conn.Query(context.Background(), "select ts, details from "+cfg.Audit.Database.Name+".operations where cluster_id='8468922059162439502'")
 		assert.NoError(t, err)
 		assert.Equal(t, 11, len(data.Data))
 	})
