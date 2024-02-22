@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -192,6 +193,8 @@ func (gm *GeneralMetric) handleBatchMetrics(request []StableArrayInfo) error {
 				gmLogger.Error("stable name is empty")
 				continue
 			}
+
+			table.Name = strings.ToLower(table.Name)
 			if _, ok := Load(table.Name); !ok {
 				Init(table.Name)
 			}
@@ -287,6 +290,14 @@ func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
 	}
 }
 
+func escapeInfluxProtocol(s string) string {
+	s = strings.ReplaceAll(s, ",", "\\,")
+	s = strings.ReplaceAll(s, "=", "\\=")
+	s = strings.ReplaceAll(s, " ", "\\ ")
+	s = strings.ReplaceAll(s, "\"", "\\\"")
+	return s
+}
+
 func writeTags(tags []Tag, stbName string, buf *bytes.Buffer) {
 	var nameArray []string
 	if columnSeq, ok := Load(stbName); ok {
@@ -310,7 +321,11 @@ func writeTags(tags []Tag, stbName string, buf *bytes.Buffer) {
 
 	for _, name := range nameArray {
 		if value, ok := tagMap[name]; ok {
-			buf.WriteString(fmt.Sprintf(",%s=%s", name, value))
+			if value != "" {
+				buf.WriteString(fmt.Sprintf(",%s=%s", name, escapeInfluxProtocol(value)))
+			} else {
+				gmLogger.Errorf("## tag value is empty, tag name: %s", name)
+			}
 		}
 	}
 }

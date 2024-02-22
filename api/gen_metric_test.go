@@ -144,7 +144,7 @@ func TestGenMetric(t *testing.T) {
 						"value": "1"
 					}, {
 						"name": "dnode_ep",
-						"value": "ssfood06:6130"
+						"value": ", =\"ssfood06:6130"
 					}],
 					"metrics": [{
 						"name": "uptime",
