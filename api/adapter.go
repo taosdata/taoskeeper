@@ -56,7 +56,6 @@ func NewAdapterImporter(conf *config.Config) {
 		host:         conf.TDengine.Host,
 		port:         conf.TDengine.Port,
 		database:     conf.Metrics.Database,
-		adapters:     conf.TaosAdapter.Address,
 	}
 	imp.setNextTime(time.Now())
 	go imp.work()

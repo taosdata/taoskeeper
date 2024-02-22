@@ -1,11 +1,9 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
@@ -18,17 +16,17 @@ import (
 var logger = log.GetLogger("report")
 
 var createList = []string{
-	CreateClusterInfoSql,
-	CreateDnodeSql,
-	CreateMnodeSql,
-	CreateDnodeInfoSql,
-	CreateDataDirSql,
-	CreateLogDirSql,
-	CreateTempDirSql,
-	CreateVgroupsInfoSql,
-	CreateVnodeRoleSql,
-	CreateSummarySql,
-	CreateGrantInfoSql,
+	// CreateClusterInfoSql,
+	// CreateDnodeSql,
+	// CreateMnodeSql,
+	// CreateDnodeInfoSql,
+	// CreateDataDirSql,
+	// CreateLogDirSql,
+	// CreateTempDirSql,
+	// CreateVgroupsInfoSql,
+	// CreateVnodeRoleSql,
+	// CreateSummarySql,
+	// CreateGrantInfoSql,
 	CreateKeeperSql,
 }
 
@@ -57,217 +55,8 @@ func NewReporter(conf *config.Config) *Reporter {
 
 func (r *Reporter) Init(c gin.IRouter) {
 	c.POST("report", r.handlerFunc())
-	r.createDatabase()
-	r.creatTables()
-	// todo: it can delete in the future.
-	if r.shouldDetectFields() {
-		r.detectGrantInfoFieldType()
-		r.detectClusterInfoFieldType()
-		r.detectVgroupsInfoType()
-	}
-}
-
-func (r *Reporter) getConn() *db.Connector {
-	conn, err := db.NewConnector(r.username, r.password, r.host, r.port)
-	if err != nil {
-		logger.WithError(err).Error("connect to database error")
-		panic(err)
-	}
-	return conn
-}
-
-func (r *Reporter) detectGrantInfoFieldType() {
-	// `expire_time` `timeseries_used` `timeseries_total` in table `grant_info` changed to bigint from TS-3003.
-	ctx := context.Background()
-	conn := r.getConn()
-	defer r.closeConn(conn)
-
-	r.detectFieldType(ctx, conn, "grants_info", "expire_time", "bigint")
-	r.detectFieldType(ctx, conn, "grants_info", "timeseries_used", "bigint")
-	r.detectFieldType(ctx, conn, "grants_info", "timeseries_total", "bigint")
-}
-
-func (r *Reporter) detectClusterInfoFieldType() {
-	// `tbs_total` in table `cluster_info` changed to bigint from TS-3003.
-	ctx := context.Background()
-	conn := r.getConn()
-	defer r.closeConn(conn)
-
-	r.detectFieldType(ctx, conn, "cluster_info", "tbs_total", "bigint")
-
-	// add column `topics_total` and `streams_total` from TD-22032
-	if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "topics_total"); !exists {
-		logger.Warningf("## %s.cluster_info.topics_total not exists, will add it", r.dbname)
-		r.addColumn(ctx, conn, "cluster_info", "topics_total", "int")
-	}
-	if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "streams_total"); !exists {
-		logger.Warningf("## %s.cluster_info.streams_total not exists, will add it", r.dbname)
-		r.addColumn(ctx, conn, "cluster_info", "streams_total", "int")
-	}
-}
-
-func (r *Reporter) detectVgroupsInfoType() {
-	// `tables_num` in table `vgroups_info` changed to bigint from TS-3003.
-	ctx := context.Background()
-	conn := r.getConn()
-	defer r.closeConn(conn)
-
-	r.detectFieldType(ctx, conn, "vgroups_info", "tables_num", "bigint")
-}
-
-func (r *Reporter) detectFieldType(ctx context.Context, conn *db.Connector, table, field, fieldType string) {
-	_, colType := r.columnInfo(ctx, conn, table, field)
-	if colType == "INT" {
-		logger.Warningf("## %s.%s.%s type is %s, will change to %s", r.dbname, table, field, colType, fieldType)
-		// drop column `tables_num`
-		r.dropColumn(ctx, conn, table, field)
-
-		// add column `tables_num`
-		r.addColumn(ctx, conn, table, field, fieldType)
-	}
-}
-
-func (r *Reporter) shouldDetectFields() bool {
-	ctx := context.Background()
-	conn := r.getConn()
-	defer r.closeConn(conn)
-
-	version, err := r.serverVersion(ctx, conn)
-	if err != nil {
-		logger.Errorf("get server version error: %s", err)
-		return false
-	}
-
-	// if server version is less than v3.0.3.0, should not detect fields.
-	versions := strings.Split(version, ".")
-	if len(versions) < 4 {
-		logger.Errorf("get server version error. version is: %s", version)
-		return false
-	}
-
-	v1, _ := strconv.Atoi(versions[0])
-	v2, _ := strconv.Atoi(versions[1])
-	v3, _ := strconv.Atoi(versions[2])
-
-	if v1 > 3 || v2 > 0 || v3 >= 3 {
-		return true
-	}
-
-	return false
-}
-
-func (r *Reporter) serverVersion(ctx context.Context, conn *db.Connector) (version string, err error) {
-	res, err := conn.Query(ctx, "select server_version()")
-	if err != nil {
-		logger.WithError(err).Error("get server version error")
-		return
-	}
-
-	if len(res.Data) == 0 {
-		logger.Errorf("get server version error. response is %+v", res)
-		return
-	}
-
-	if len(res.Data) != 1 && len(res.Data[0]) != 1 {
-		logger.Errorf("get server version error. response is %+v", res)
-		return
-	}
-
-	version = res.Data[0][0].(string)
-
-	return
-}
-
-func (r *Reporter) columnInfo(ctx context.Context, conn *db.Connector, table string, field string) (exists bool, colType string) {
-	res, err := conn.Query(ctx, fmt.Sprintf("select col_type from information_schema.ins_columns where table_name='%s' and db_name='%s' and col_name='%s'", table, r.dbname, field))
-	if err != nil {
-		logger.WithError(err).Errorf("get %s field type error", r.dbname)
-		panic(err)
-	}
-
-	if len(res.Data) == 0 {
-		return
-	}
-
-	if len(res.Data) != 1 && len(res.Data[0]) != 1 {
-		logger.Errorf("get field type for %s error. response is %+v", table, res)
-		panic(fmt.Sprintf("get field type for %s error. response is %+v", table, res))
-	}
-
-	exists = true
-	colType = res.Data[0][0].(string)
-	colType = strings.ToUpper(colType)
-	return
-}
-
-func (r *Reporter) dropColumn(ctx context.Context, conn *db.Connector, table string, field string) {
-	if _, err := conn.Exec(ctx, fmt.Sprintf("alter table %s.%s drop column %s", r.dbname, table, field)); err != nil {
-		logger.WithError(err).Errorf("drop column %s from table %s error", field, table)
-		panic(err)
-	}
-}
-
-func (r *Reporter) addColumn(ctx context.Context, conn *db.Connector, table string, field string, fieldType string) {
-	if _, err := conn.Exec(ctx, fmt.Sprintf("alter table %s.%s add column %s %s", r.dbname, table, field, fieldType)); err != nil {
-		logger.WithError(err).Errorf("add column %s to table %s error", field, table)
-		panic(err)
-	}
-}
-
-func (r *Reporter) createDatabase() {
-	ctx := context.Background()
-	conn := r.getConn()
-	defer r.closeConn(conn)
-
-	createDBSql := r.generateCreateDBSql()
-	logger.Warningf("create database sql: %s", createDBSql)
-
-	if _, err := conn.Exec(ctx, createDBSql); err != nil {
-		logger.WithError(err).Errorf("create database %s error %v", r.dbname, err)
-		panic(err)
-	}
-}
-
-func (r *Reporter) generateCreateDBSql() string {
-	var buf bytes.Buffer
-	buf.WriteString("create database if not exists ")
-	buf.WriteString(r.dbname)
-
-	for k, v := range r.databaseOptions {
-		buf.WriteString(" ")
-		buf.WriteString(k)
-		switch v := v.(type) {
-		case string:
-			buf.WriteString(fmt.Sprintf(" '%s'", v))
-		default:
-			buf.WriteString(fmt.Sprintf(" %v", v))
-		}
-		buf.WriteString(" ")
-	}
-	return buf.String()
-}
-
-func (r *Reporter) creatTables() {
-	ctx := context.Background()
-	conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname)
-	if err != nil {
-		logger.WithError(err).Errorf("connect to database error")
-		return
-	}
-	defer r.closeConn(conn)
-
-	for _, createSql := range createList {
-		logger.Infof("execute sql: %s", createSql)
-		if _, err = conn.Exec(ctx, createSql); err != nil {
-			logger.Errorf("execute sql: %s, error: %s", createSql, err)
-		}
-	}
-}
-
-func (r *Reporter) closeConn(conn *db.Connector) {
-	if err := conn.Close(); err != nil {
-		logger.WithError(err).Errorf("close connection error")
-	}
+	createDatabase(r.username, r.password, r.host, r.port, r.dbname, r.databaseOptions)
+	creatTables(r.username, r.password, r.host, r.port, r.dbname, createList)
 }
 
 func (r *Reporter) handlerFunc() gin.HandlerFunc {
@@ -304,7 +93,7 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 			logger.WithError(err).Errorf("connect to database error")
 			return
 		}
-		defer r.closeConn(conn)
+		defer closeConn(conn)
 		ctx := context.Background()
 
 		for _, sql := range sqls {
