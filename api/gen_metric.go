@@ -291,6 +291,7 @@ func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
 }
 
 func escapeInfluxProtocol(s string) string {
+	s = strings.TrimSuffix(s, "\\")
 	s = strings.ReplaceAll(s, ",", "\\,")
 	s = strings.ReplaceAll(s, "=", "\\=")
 	s = strings.ReplaceAll(s, " ", "\\ ")
