@@ -339,7 +339,7 @@ func (p *Processor) process() {
 			tagIndex = len(columns)
 			b.WriteString(" group by ")
 			for i, tag := range table.Variables {
-				b.WriteString(tag)
+				b.WriteString("`" + tag + "`")
 				if i != len(table.Variables)-1 {
 					b.WriteByte(',')
 				}
