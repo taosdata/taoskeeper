@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
@@ -13,6 +14,7 @@ var commonLogger = log.GetLogger("common")
 
 func createDatabase(username string, password string, host string, port int, dbname string, databaseOptions map[string]interface{}) {
 	ctx := context.Background()
+
 	conn, err := db.NewConnector(username, password, host, port)
 	if err != nil {
 		commonLogger.WithError(err).Errorf("connect to adapter error")
@@ -24,10 +26,15 @@ func createDatabase(username string, password string, host string, port int, dbn
 	createDBSql := generateCreateDBSql(dbname, databaseOptions)
 	commonLogger.Warningf("create database sql: %s", createDBSql)
 
-	if _, err := conn.Exec(ctx, createDBSql); err != nil {
-		commonLogger.WithError(err).Errorf("create database %s error %v", dbname, err)
-		panic(err)
+	for i := 0; i < 3; i++ {
+		if _, err := conn.Exec(ctx, createDBSql); err != nil {
+			commonLogger.WithError(err).Errorf("try %v times: create database %s error %v", i+1, dbname, err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		return
 	}
+	panic(err)
 }
 
 func generateCreateDBSql(dbname string, databaseOptions map[string]interface{}) string {
