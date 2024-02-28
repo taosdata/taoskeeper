@@ -325,8 +325,11 @@ func writeTags(tags []Tag, stbName string, buf *bytes.Buffer) {
 			if value != "" {
 				buf.WriteString(fmt.Sprintf(",%s=%s", name, escapeInfluxProtocol(value)))
 			} else {
+				buf.WriteString(fmt.Sprintf(",%s=%s", name, "unknown"))
 				gmLogger.Errorf("## tag value is empty, tag name: %s", name)
 			}
+		} else {
+			buf.WriteString(fmt.Sprintf(",%s=%s", name, "unknown"))
 		}
 	}
 }
