@@ -186,6 +186,34 @@ func NewProcessor(conf *config.Config) *Processor {
 	return p
 }
 
+func (p *Processor) RefreshMeta() {
+	ctx := context.Background()
+	var metaChanged = false
+
+	sql := fmt.Sprintf("select stable_name from information_schema.ins_stables where db_name = '%s' and (stable_name like 'taosd\\_%%' or stable_name like 'taos\\_%%' or stable_name like 'adapter\\_%%' or stable_name like 'keeper\\_%%')", p.db)
+	data, err := p.dbConn.Query(ctx, sql)
+	if err != nil {
+		return
+	}
+	builderLogger.Debugf("show stables: %s", sql)
+
+	for _, info := range data.Data {
+		name := info[0].(string)
+		builderLogger.Debug("stable: ", info)
+
+		_, exist := p.tables[name]
+		if exist {
+			continue
+		}
+		p.tables[name] = struct{}{}
+		metaChanged = true
+	}
+
+	if metaChanged {
+		p.Prepare()
+	}
+}
+
 func (p *Processor) Prepare() {
 	locker := sync.RWMutex{}
 	wg := sync.WaitGroup{}
@@ -301,6 +329,7 @@ func (p *Processor) work() {
 		select {
 		case t := <-ticker.C:
 			if t.After(p.nextTime) {
+				p.RefreshMeta()
 				p.process()
 				p.setNextTime(time.Now())
 			}
