@@ -186,7 +186,7 @@ func (p *Processor) RefreshMeta() {
 	ctx := context.Background()
 	var metaChanged = false
 
-	sql := fmt.Sprintf("select stable_name from information_schema.ins_stables where db_name = '%s' and (stable_name like 'taosd\\_%%' or stable_name like 'taos\\_%%' or stable_name like 'adapter\\_%%' or stable_name like 'keeper\\_%%')", p.db)
+	sql := fmt.Sprintf(GetStableNameListSql(), p.db)
 	data, err := p.dbConn.Query(ctx, sql)
 	if err != nil {
 		return
