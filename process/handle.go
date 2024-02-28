@@ -37,7 +37,6 @@ type Processor struct {
 	tableList        []string
 	ctx              context.Context
 	rotationInterval time.Duration
-	nextTime         time.Time
 	exitChan         chan struct{}
 	dbConn           *db.Connector
 	summaryTable     map[string]*Table
@@ -180,9 +179,6 @@ func NewProcessor(conf *config.Config) *Processor {
 		tables:           tables,
 	}
 	p.Prepare()
-	p.process()
-	p.setNextTime(time.Now())
-	go p.work()
 	return p
 }
 
@@ -315,32 +311,7 @@ func (p *Processor) withDBName(tableName string) string {
 	return b.String()
 }
 
-func (p *Processor) setNextTime(t time.Time) {
-	p.nextTime = t.Round(p.rotationInterval)
-	if p.nextTime.Before(time.Now()) {
-		p.nextTime = p.nextTime.Add(p.rotationInterval)
-	}
-}
-
-func (p *Processor) work() {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case t := <-ticker.C:
-			if t.After(p.nextTime) {
-				p.RefreshMeta()
-				p.process()
-				p.setNextTime(time.Now())
-			}
-		case <-p.exitChan:
-			logger.Warn("exit process")
-			return
-		}
-	}
-}
-
-func (p *Processor) process() {
+func (p *Processor) Process() {
 	for _, tableName := range p.tableList {
 		tagIndex := 0
 		hasTag := false
