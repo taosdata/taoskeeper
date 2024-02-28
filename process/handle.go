@@ -7,6 +7,7 @@ import (
 
 	"github.com/taosdata/taoskeeper/db"
 
+	"strings"
 	"sync"
 	"time"
 
@@ -36,7 +37,6 @@ type Processor struct {
 	tableList        []string
 	ctx              context.Context
 	rotationInterval time.Duration
-	nextTime         time.Time
 	exitChan         chan struct{}
 	dbConn           *db.Connector
 	summaryTable     map[string]*Table
@@ -179,10 +179,35 @@ func NewProcessor(conf *config.Config) *Processor {
 		tables:           tables,
 	}
 	p.Prepare()
-	p.process()
-	p.setNextTime(time.Now())
-	go p.work()
 	return p
+}
+
+func (p *Processor) RefreshMeta() {
+	ctx := context.Background()
+	var metaChanged = false
+
+	sql := fmt.Sprintf(GetStableNameListSql(), p.db)
+	data, err := p.dbConn.Query(ctx, sql)
+	if err != nil {
+		return
+	}
+	builderLogger.Debugf("show stables: %s", sql)
+
+	for _, info := range data.Data {
+		name := info[0].(string)
+		builderLogger.Debug("stable: ", info)
+
+		_, exist := p.tables[name]
+		if exist {
+			continue
+		}
+		p.tables[name] = struct{}{}
+		metaChanged = true
+	}
+
+	if metaChanged {
+		p.Prepare()
+	}
 }
 
 func (p *Processor) Prepare() {
@@ -286,31 +311,7 @@ func (p *Processor) withDBName(tableName string) string {
 	return b.String()
 }
 
-func (p *Processor) setNextTime(t time.Time) {
-	p.nextTime = t.Round(p.rotationInterval)
-	if p.nextTime.Before(time.Now()) {
-		p.nextTime = p.nextTime.Add(p.rotationInterval)
-	}
-}
-
-func (p *Processor) work() {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case t := <-ticker.C:
-			if t.After(p.nextTime) {
-				p.process()
-				p.setNextTime(time.Now())
-			}
-		case <-p.exitChan:
-			logger.Warn("exit process")
-			return
-		}
-	}
-}
-
-func (p *Processor) process() {
+func (p *Processor) Process() {
 	for _, tableName := range p.tableList {
 		tagIndex := 0
 		hasTag := false
@@ -413,7 +414,9 @@ func (p *Processor) buildFQName(tableName, alias, column, unit string) string {
 	if alias != "" {
 		b.WriteString(alias)
 	} else {
-		b.WriteString(tableName)
+		tempTableName := strings.TrimPrefix(tableName, "taosd_")
+		tempTableName = strings.TrimPrefix(tempTableName, "taos_")
+		b.WriteString(tempTableName)
 	}
 	if column != "" {
 		b.WriteByte('_')

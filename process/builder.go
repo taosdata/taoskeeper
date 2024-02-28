@@ -24,11 +24,12 @@ func ExpandMetricsFromConfig(ctx context.Context, conn *db.Connector, cfg *confi
 		tables[name] = struct{}{}
 	}
 
-	data, err := conn.Query(ctx, fmt.Sprintf("show %s.stables", cfg.Database))
+	sql := fmt.Sprintf(GetStableNameListSql(), cfg.Database)
+	data, err := conn.Query(ctx, sql)
 	if err != nil {
 		return nil, err
 	}
-	builderLogger.Debug("show stables")
+	builderLogger.Debugf("show stables: %s", sql)
 
 	for _, info := range data.Data {
 		name := info[0].(string)
@@ -42,4 +43,8 @@ func ExpandMetricsFromConfig(ctx context.Context, conn *db.Connector, cfg *confi
 		tables[name] = struct{}{}
 	}
 	return
+}
+
+func GetStableNameListSql() string {
+	return "select stable_name from information_schema.ins_stables where db_name = '%s' and (stable_name like 'taosd\\_%%' or stable_name like 'taos\\_%%' or stable_name like 'adapter\\_%%' or stable_name like 'keeper\\_%%')"
 }
