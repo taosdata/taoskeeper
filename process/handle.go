@@ -7,6 +7,7 @@ import (
 
 	"github.com/taosdata/taoskeeper/db"
 
+	"strings"
 	"sync"
 	"time"
 
@@ -413,7 +414,9 @@ func (p *Processor) buildFQName(tableName, alias, column, unit string) string {
 	if alias != "" {
 		b.WriteString(alias)
 	} else {
-		b.WriteString(tableName)
+		tempTableName := strings.TrimPrefix(tableName, "taosd_")
+		tempTableName = strings.TrimPrefix(tempTableName, "taos_")
+		b.WriteString(tempTableName)
 	}
 	if column != "" {
 		b.WriteByte('_')
