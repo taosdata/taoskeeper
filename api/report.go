@@ -85,6 +85,12 @@ func (r *Reporter) detectGrantInfoFieldType() {
 	r.detectFieldType(ctx, conn, "grants_info", "expire_time", "bigint")
 	r.detectFieldType(ctx, conn, "grants_info", "timeseries_used", "bigint")
 	r.detectFieldType(ctx, conn, "grants_info", "timeseries_total", "bigint")
+	if r.tagExist(ctx, conn, "grants_info", "dnode_id") {
+		r.dropTag(ctx, conn, "grants_info", "dnode_id")
+	}
+	if r.tagExist(ctx, conn, "grants_info", "dnode_ep") {
+		r.dropTag(ctx, conn, "grants_info", "dnode_ep")
+	}
 }
 
 func (r *Reporter) detectClusterInfoFieldType() {
@@ -200,9 +206,37 @@ func (r *Reporter) columnInfo(ctx context.Context, conn *db.Connector, table str
 	return
 }
 
+func (r *Reporter) tagExist(ctx context.Context, conn *db.Connector, stable string, tag string) (exists bool) {
+	res, err := conn.Query(ctx, fmt.Sprintf("select tag_name from information_schema.ins_tags where stable_name='%s' and db_name='%s' and tag_name='%s'", stable, r.dbname, tag))
+	if err != nil {
+		logger.WithError(err).Errorf("get %s tag_name error", r.dbname)
+		panic(err)
+	}
+
+	if len(res.Data) == 0 {
+		exists = false
+		return
+	}
+
+	if len(res.Data) != 1 && len(res.Data[0]) != 1 {
+		logger.Errorf("get tag_name for %s error. response is %+v", stable, res)
+		panic(fmt.Sprintf("get tag_name for %s error. response is %+v", stable, res))
+	}
+
+	exists = true
+	return
+}
+
 func (r *Reporter) dropColumn(ctx context.Context, conn *db.Connector, table string, field string) {
 	if _, err := conn.Exec(ctx, fmt.Sprintf("alter table %s.%s drop column %s", r.dbname, table, field)); err != nil {
 		logger.WithError(err).Errorf("drop column %s from table %s error", field, table)
+		panic(err)
+	}
+}
+
+func (r *Reporter) dropTag(ctx context.Context, conn *db.Connector, stable string, tag string) {
+	if _, err := conn.Exec(ctx, fmt.Sprintf("alter stable %s.%s drop tag %s", r.dbname, stable, tag)); err != nil {
+		logger.WithError(err).Errorf("drop tag %s from stable %s error", tag, stable)
 		panic(err)
 	}
 }
@@ -291,7 +325,7 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 		}
 		sqls = append(sqls, insertDnodeSql(report.DnodeInfo, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts))
 		if report.GrantInfo != nil {
-			sqls = append(sqls, insertGrantSql(*report.GrantInfo, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts))
+			sqls = append(sqls, insertGrantSql(*report.GrantInfo, report.DnodeID, report.ClusterID, report.Ts))
 		}
 		sqls = append(sqls, insertDataDirSql(report.DiskInfos, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts)...)
 		for _, group := range report.VgroupInfos {
@@ -422,8 +456,7 @@ func insertLogSummary(log LogInfo, DnodeID int, DnodeEp string, ClusterID string
 		ClusterID+strconv.Itoa(DnodeID), DnodeID, DnodeEp, ClusterID, ts, e, info, debug, trace)
 }
 
-func insertGrantSql(g GrantInfo, DnodeID int, DnodeEp string, ClusterID string, ts string) string {
-	return fmt.Sprintf("insert into grants_info_%s using grants_info tags (%d, '%s', '%s') (ts, expire_time, "+
-		"timeseries_used, timeseries_total) values ('%s', %d, %d, %d)", ClusterID+strconv.Itoa(DnodeID), DnodeID,
-		DnodeEp, ClusterID, ts, g.ExpireTime, g.TimeseriesUsed, g.TimeseriesTotal)
+func insertGrantSql(g GrantInfo, DnodeID int, ClusterID string, ts string) string {
+	return fmt.Sprintf("insert into grants_info_%s using grants_info tags ('%s') (ts, expire_time, "+
+		"timeseries_used, timeseries_total) values ('%s', %d, %d, %d)", ClusterID+strconv.Itoa(DnodeID), ClusterID, ts, g.ExpireTime, g.TimeseriesUsed, g.TimeseriesTotal)
 }
