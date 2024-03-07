@@ -7,6 +7,7 @@ import (
 
 	"github.com/taosdata/taoskeeper/db"
 
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +21,77 @@ import (
 )
 
 var logger = log.GetLogger("handle")
+
+var metricNameMap = map[string]string{
+	"taosd_cluster_basic_first_ep":          "cluster_info_first_ep",
+	"taosd_cluster_basic_first_ep_dnode_id": "cluster_info_first_ep_dnode_id",
+	"taosd_cluster_basic_cluster_version":   "cluster_info_version",
+
+	"taosd_cluster_info_cluster_uptime":    "cluster_info_master_uptime",
+	"taosd_cluster_info_dbs_total":         "cluster_info_dbs_total",
+	"taosd_cluster_info_tbs_total":         "cluster_info_tbs_total",
+	"taosd_cluster_info_stbs_total":        "cluster_info_stbs_total",
+	"taosd_cluster_info_dnodes_total":      "cluster_info_dnodes_total",
+	"taosd_cluster_info_dnodes_alive":      "cluster_info_dnodes_alive",
+	"taosd_cluster_info_mnodes_total":      "cluster_info_mnodes_total",
+	"taosd_cluster_info_mnodes_alive":      "cluster_info_mnodes_alive",
+	"taosd_cluster_info_vgroups_total":     "cluster_info_vgroups_total",
+	"taosd_cluster_info_vgroups_alive":     "cluster_info_vgroups_alive",
+	"taosd_cluster_info_vnodes_total":      "cluster_info_vnodes_total",
+	"taosd_cluster_info_vnodes_alive":      "cluster_info_vnodes_alive",
+	"taosd_cluster_info_connections_total": "cluster_info_connections_total",
+	"taosd_cluster_info_topics_total":      "cluster_info_topics_total",
+	"taosd_cluster_info_streams_total":     "cluster_info_streams_total",
+
+	"taosd_cluster_info_grants_expire_time":      "grants_info_expire_time",
+	"taosd_cluster_info_grants_timeseries_used":  "grants_info_timeseries_used",
+	"taosd_cluster_info_grants_timeseries_total": "grants_info_timeseries_total",
+
+	"taosd_vgroups_info_vgroup_id":     "vgroups_info_vgroup_id",
+	"taosd_vgroups_info_database_name": "vgroups_info_database_name",
+	"taosd_vgroups_info_tables_num":    "vgroups_info_tables_num",
+	"taosd_vgroups_info_status":        "vgroups_info_status",
+
+	"taosd_dnodes_info_uptime":          "dnodes_info_uptime",
+	"taosd_dnodes_info_cpu_engine":      "dnodes_info_cpu_engine",
+	"taosd_dnodes_info_cpu_system":      "dnodes_info_cpu_system",
+	"taosd_dnodes_info_cpu_cores":       "dnodes_info_cpu_cores",
+	"taosd_dnodes_info_mem_engine":      "dnodes_info_mem_engine",
+	"taosd_dnodes_info_mem_free":        "dnodes_info_mem_system",
+	"taosd_dnodes_info_mem_total":       "dnodes_info_mem_total",
+	"taosd_dnodes_info_disk_engine":     "dnodes_info_disk_engine",
+	"taosd_dnodes_info_disk_used":       "dnodes_info_disk_used",
+	"taosd_dnodes_info_disk_total":      "dnodes_info_disk_total",
+	"taosd_dnodes_info_system_net_in":   "dnodes_info_net_in",
+	"taosd_dnodes_info_system_net_out":  "dnodes_info_net_out",
+	"taosd_dnodes_info_io_read":         "dnodes_info_io_read",
+	"taosd_dnodes_info_io_write":        "dnodes_info_io_write",
+	"taosd_dnodes_info_io_read_disk":    "dnodes_info_io_read_disk",
+	"taosd_dnodes_info_io_write_disk":   "dnodes_info_io_write_disk",
+	"taosd_dnodes_info_vnodes_num":      "dnodes_info_vnodes_num",
+	"taosd_dnodes_info_masters":         "dnodes_info_masters",
+	"taosd_dnodes_info_has_mnode":       "dnodes_info_has_mnode",
+	"taosd_dnodes_info_has_qnode":       "dnodes_info_has_qnode",
+	"taosd_dnodes_info_has_snode":       "dnodes_info_has_snode",
+	"taosd_dnodes_info_has_bnode":       "dnodes_info_has_bnode",
+	"taosd_dnodes_info_errors":          "dnodes_info_errors",
+	"taosd_dnodes_info_error_log_count": "dnodes_info_error",
+	"taosd_dnodes_info_info_log_count":  "dnodes_info_info",
+	"taosd_dnodes_info_debug_log_count": "dnodes_info_debug",
+	"taosd_dnodes_info_trace_log_count": "dnodes_info_trace",
+
+	"taosd_dnodes_status_status": "d_info_status",
+
+	"taosd_mnodes_info_role": "m_info_role",
+	"taosd_vnodes_info_role": "vnodes_role_vnode_role",
+
+	// "taosd_dnodes_log_dirs_used":  "log_dir_used",
+	// "taosd_dnodes_log_dirs_avail": "log_dir_avail",
+}
+
+var needSpecialHandleMap = map[string]string{
+	"taosd_dnodes_log_dirs": "temp_dir",
+}
 
 type CollectType string
 
@@ -179,35 +251,8 @@ func NewProcessor(conf *config.Config) *Processor {
 		tables:           tables,
 	}
 	p.Prepare()
+	p.process()
 	return p
-}
-
-func (p *Processor) RefreshMeta() {
-	ctx := context.Background()
-	var metaChanged = false
-
-	sql := fmt.Sprintf(GetStableNameListSql(), p.db)
-	data, err := p.dbConn.Query(ctx, sql)
-	if err != nil {
-		return
-	}
-	builderLogger.Debugf("show stables: %s", sql)
-
-	for _, info := range data.Data {
-		name := info[0].(string)
-		builderLogger.Debug("stable: ", info)
-
-		_, exist := p.tables[name]
-		if exist {
-			continue
-		}
-		p.tables[name] = struct{}{}
-		metaChanged = true
-	}
-
-	if metaChanged {
-		p.Prepare()
-	}
 }
 
 func (p *Processor) Prepare() {
@@ -217,6 +262,14 @@ func (p *Processor) Prepare() {
 
 	for tn := range p.tables {
 		tableName := tn
+
+		if _, ok := needSpecialHandleMap[tableName]; ok {
+			locker.Lock()
+			p.specialHandle(tableName)
+			locker.Unlock()
+			wg.Done()
+			continue
+		}
 
 		err := pool.GoroutinePool.Submit(func() {
 			defer wg.Done()
@@ -267,10 +320,16 @@ func (p *Processor) Prepare() {
 				if !exist {
 					columnName = column
 					metricType = exchangeDBType(typeList[i])
+
+					// 为了兼容性，硬编码，后续要优化
+					if strings.HasSuffix(columnName, "role") {
+						metricType = Info
+					}
 				}
 
 				labels := make(map[string]string)
-				fqName := p.buildFQName(tableName, "", columnName, "")
+
+				fqName := p.buildFQName(tableName, columnName)
 				pDesc := prometheus.NewDesc(fqName, "", nil, labels)
 				metric := &Metric{
 					Type:        metricType,
@@ -294,6 +353,7 @@ func (p *Processor) Prepare() {
 			p.metrics[tableName] = t
 			p.tableList = append(p.tableList, tableName)
 			locker.Unlock()
+
 		})
 		if err != nil {
 			panic(err)
@@ -301,6 +361,55 @@ func (p *Processor) Prepare() {
 	}
 
 	wg.Wait()
+}
+
+func (p *Processor) specialHandle(specialTableName string) {
+	if specialTableName != "taosd_dnodes_log_dirs" {
+		return
+	}
+	labels := make(map[string]string)
+	metrics := make([]*Metric, 0, 4)
+	newMetrics := make(map[string]*Metric, 4)
+	columnList := make([]string, 0, 4)
+
+	for _, tbName := range []string{"temp_dir", "log_dirs"} {
+		for _, columnName := range []string{"avail", "used", "total"} {
+			fqName := p.buildFQName(tbName, columnName)
+			pDesc := prometheus.NewDesc(fqName, "", nil, nil)
+			metric := &Metric{
+				Type:        Gauge,
+				Desc:        pDesc,
+				FQName:      fqName,
+				Help:        "",
+				ConstLabels: labels,
+			}
+			metrics = append(metrics, metric)
+			newMetrics[columnName] = metric
+			columnList = append(columnList, columnName)
+		}
+
+		fqName := p.buildFQName(tbName, "name")
+		pDesc := prometheus.NewDesc(fqName, "", nil, nil)
+		metric := &Metric{
+			Type:        Info,
+			Desc:        pDesc,
+			FQName:      fqName,
+			Help:        "",
+			ConstLabels: labels,
+		}
+		metrics = append(metrics, metric)
+		newMetrics["name"] = metric
+		columnList = append(columnList, "name")
+
+		t := &Table{
+			Variables:  []string{"dnode_id", "dnode_ep", "cluster_id"},
+			Metrics:    metrics,
+			NewMetrics: newMetrics,
+			ColumnList: columnList,
+		}
+		p.metrics[specialTableName] = t
+		p.tableList = append(p.tableList, specialTableName)
+	}
 }
 
 func (p *Processor) withDBName(tableName string) string {
@@ -311,7 +420,7 @@ func (p *Processor) withDBName(tableName string) string {
 	return b.String()
 }
 
-func (p *Processor) Process() {
+func (p *Processor) process() {
 	for _, tableName := range p.tableList {
 		tagIndex := 0
 		hasTag := false
@@ -381,6 +490,12 @@ func (p *Processor) Process() {
 				metric := table.NewMetrics[column]
 				switch metric.Type {
 				case Info:
+					_, isFloat := valuesMap[column].(float64)
+					if strings.HasSuffix(column, "role") && valuesMap[column] != nil && isFloat {
+						v = getRoleStr(valuesMap[column].(float64))
+						break
+					}
+
 					if valuesMap[column] != nil {
 						v = i2string(valuesMap[column])
 					} else {
@@ -399,36 +514,49 @@ func (p *Processor) Process() {
 				})
 			}
 		}
+
+		if tableName == "taosd_dnodes_log_dirs" {
+			for i, column := range table.ColumnList {
+
+				// values[i].v
+
+				metric := table.NewMetrics[column]
+				logger.Debugf("set metric [%s] value as %v", column, values[i])
+				metric.SetValue(values[i])
+			}
+			continue
+		}
+
 		for i, column := range table.ColumnList {
 			metric := table.NewMetrics[column]
-			logger.Debugf("set metric [%d] value as %v", i, values[i])
+			logger.Debugf("set metric [%s] value as %v", column, values[i])
 			metric.SetValue(values[i])
 		}
 	}
 }
 
-func (p *Processor) buildFQName(tableName, alias, column, unit string) string {
+func (p *Processor) buildFQName(tableName string, column string) string {
+
+	// keep same metric name
+	tempFQName := tableName + "_" + column
+	if _, ok := metricNameMap[tempFQName]; ok {
+		return p.prefix + "_" + metricNameMap[tempFQName]
+	}
+
 	b := pool.BytesPoolGet()
 	b.WriteString(p.prefix)
 	b.WriteByte('_')
-	if alias != "" {
-		b.WriteString(alias)
-	} else {
-		tempTableName := strings.TrimPrefix(tableName, "taosd_")
-		tempTableName = strings.TrimPrefix(tempTableName, "taos_")
-		b.WriteString(tempTableName)
-	}
+
+	b.WriteString(tableName)
+
 	if column != "" {
 		b.WriteByte('_')
 		b.WriteString(column)
 	}
 
-	if len(unit) != 0 {
-		b.WriteByte('_')
-		b.WriteString(unit)
-	}
 	fqName := b.String()
 	pool.BytesPoolPut(b)
+
 	return fqName
 }
 
@@ -441,12 +569,33 @@ func (p *Processor) GetMetric() map[string]*Table {
 	return p.metrics
 }
 
+func getRoleStr(v float64) string {
+	rounded := math.Round(v)
+	integer := int(rounded)
+
+	switch integer {
+	case 0:
+		return "offline"
+	case 100:
+		return "follower"
+	case 101:
+		return "candidate"
+	case 102:
+		return "leader"
+	case 103:
+		return "error"
+	case 104:
+		return "learner"
+	}
+	return "unknown"
+}
+
 func exchangeDBType(t string) CollectType {
 	switch t {
 	case "BOOL", "FLOAT", "DOUBLE":
 		return Gauge
 	case "TINYINT", "SMALLINT", "INT", "BIGINT", "TINYINT UNSIGNED", "SMALLINT UNSIGNED", "INT UNSIGNED", "BIGINT UNSIGNED":
-		return Counter
+		return Gauge
 	case "BINARY", "NCHAR", "VARCHAR":
 		return Info
 	default:

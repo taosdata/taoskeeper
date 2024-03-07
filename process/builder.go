@@ -46,5 +46,5 @@ func ExpandMetricsFromConfig(ctx context.Context, conn *db.Connector, cfg *confi
 }
 
 func GetStableNameListSql() string {
-	return "select stable_name from information_schema.ins_stables where db_name = '%s' and (stable_name like 'taosd\\_%%' or stable_name like 'taos\\_%%' or stable_name like 'adapter\\_%%' or stable_name like 'keeper\\_%%')"
+	return "select stable_name from information_schema.ins_stables where db_name = '%s' and (stable_name not like 'taosx\\_%%')"
 }
