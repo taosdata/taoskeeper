@@ -185,6 +185,8 @@ func (p *Processor) Describe(descs chan<- *prometheus.Desc) {
 
 func (p *Processor) Collect(metrics chan<- prometheus.Metric) {
 	for _, metric := range p.metricMap {
+		logger.Tracef("metric name %v", metric.FQName)
+
 		switch metric.Type {
 		case Gauge:
 			gv := prometheus.NewGaugeVec(prometheus.GaugeOpts{
