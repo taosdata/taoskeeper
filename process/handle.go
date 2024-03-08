@@ -406,7 +406,9 @@ func (p *Processor) Prepare() {
 				// metrics = append(metrics, metric)
 				// newMetrics[column] = metric
 
+				locker.Lock()
 				p.metricMap[fqName] = metric
+				locker.Unlock()
 
 				columnList = append(columnList, column)
 			}
