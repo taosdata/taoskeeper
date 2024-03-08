@@ -47,10 +47,10 @@ var metricNameMap = map[string]string{
 	"taosd_cluster_info_grants_timeseries_used":  "grants_info_timeseries_used",
 	"taosd_cluster_info_grants_timeseries_total": "grants_info_timeseries_total",
 
-	"taosd_vgroups_info_vgroup_id":     "vgroups_info_vgroup_id",
-	"taosd_vgroups_info_database_name": "vgroups_info_database_name",
-	"taosd_vgroups_info_tables_num":    "vgroups_info_tables_num",
-	"taosd_vgroups_info_status":        "vgroups_info_status",
+	// "taosd_vgroups_info_vgroup_id":     "vgroups_info_vgroup_id",
+	// "taosd_vgroups_info_database_name": "vgroups_info_database_name",
+	// "taosd_vgroups_info_tables_num":    "vgroups_info_tables_num",
+	// "taosd_vgroups_info_status":        "vgroups_info_status",
 
 	"taosd_dnodes_info_uptime":          "dnodes_info_uptime",
 	"taosd_dnodes_info_cpu_engine":      "dnodes_info_cpu_engine",
@@ -114,10 +114,10 @@ var metricTypeMap = map[string]CollectType{
 	"taosd_cluster_info_grants_timeseries_used":  Counter,
 	"taosd_cluster_info_grants_timeseries_total": Counter,
 
-	"taosd_vgroups_info_vgroup_id":     Counter,
-	"taosd_vgroups_info_database_name": Info,
-	"taosd_vgroups_info_tables_num":    Counter,
-	"taosd_vgroups_info_status":        Info,
+	// "taosd_vgroups_info_vgroup_id":     Counter,
+	// "taosd_vgroups_info_database_name": Info,
+	// "taosd_vgroups_info_tables_num":    Counter,
+	// "taosd_vgroups_info_status":        Info,
 
 	"taosd_dnodes_info_uptime":          Gauge,
 	"taosd_dnodes_info_cpu_engine":      Gauge,
