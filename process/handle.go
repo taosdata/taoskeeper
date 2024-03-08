@@ -249,6 +249,7 @@ func (p *Processor) Collect(metrics chan<- prometheus.Metric) {
 }
 
 type Table struct {
+	tsName     string
 	Variables  []string
 	ColumnList []string
 }
@@ -364,6 +365,7 @@ func (p *Processor) Prepare() {
 			// newMetrics := make(map[string]*Metric, len(columns))
 			columnList := make([]string, 0, len(columns))
 
+			timestampColumn := "ts"
 			_, exist := p.summaryTable[tableName]
 			for i, column := range columns {
 				if _, columnExist := variablesMap[column]; columnExist {
@@ -371,6 +373,7 @@ func (p *Processor) Prepare() {
 				}
 
 				if typeList[i] == "TIMESTAMP" {
+					timestampColumn = column
 					continue
 				}
 
@@ -418,6 +421,7 @@ func (p *Processor) Prepare() {
 			}
 
 			t := &Table{
+				tsName:     timestampColumn,
 				Variables:  tags,
 				ColumnList: columnList,
 			}
@@ -506,6 +510,7 @@ func (p *Processor) Process() {
 
 		table := p.tableMap[tableName]
 		columns := table.ColumnList
+
 		for i, column := range columns {
 			b.WriteString("last_row(`" + column + "`) as `" + column + "`")
 			if i != len(columns)-1 {
@@ -523,11 +528,7 @@ func (p *Processor) Process() {
 		b.WriteString(" from ")
 		b.WriteString(p.withDBName(tableName))
 
-		if tableName != "taosd_cluster_info" && strings.HasPrefix(tableName, "taosd_") {
-			b.WriteString(" WHERE _ts > (NOW() - 1m) ")
-		} else {
-			b.WriteString(" WHERE ts > (NOW() - 1m) ")
-		}
+		b.WriteString(" WHERE " + p.tableMap[tableName].tsName + " > (NOW() - 1m) ")
 
 		if len(table.Variables) > 0 {
 			tagIndex = len(columns)
