@@ -75,10 +75,10 @@ var metricNameMap = map[string]string{
 	"taosd_dnodes_info_has_snode":       "dnodes_info_has_snode",
 	"taosd_dnodes_info_has_bnode":       "dnodes_info_has_bnode",
 	"taosd_dnodes_info_errors":          "dnodes_info_errors",
-	"taosd_dnodes_info_error_log_count": "dnodes_info_error",
-	"taosd_dnodes_info_info_log_count":  "dnodes_info_info",
-	"taosd_dnodes_info_debug_log_count": "dnodes_info_debug",
-	"taosd_dnodes_info_trace_log_count": "dnodes_info_trace",
+	"taosd_dnodes_info_error_log_count": "log_summary_error",
+	"taosd_dnodes_info_info_log_count":  "log_summary_info",
+	"taosd_dnodes_info_debug_log_count": "log_summary_debug",
+	"taosd_dnodes_info_trace_log_count": "log_summary_trace",
 
 	"taosd_dnodes_status_status": "d_info_status",
 
@@ -89,8 +89,68 @@ var metricNameMap = map[string]string{
 	// "taosd_dnodes_log_dirs_avail": "log_dir_avail",
 }
 
-var needSpecialHandleMap = map[string]string{
-	"taosd_dnodes_log_dirs": "temp_dir",
+var metricTypeMap = map[string]CollectType{
+	"taosd_cluster_basic_first_ep":          Info,
+	"taosd_cluster_basic_first_ep_dnode_id": Counter,
+	"taosd_cluster_basic_cluster_version":   Info,
+
+	"taosd_cluster_info_cluster_uptime":    Gauge,
+	"taosd_cluster_info_dbs_total":         Counter,
+	"taosd_cluster_info_tbs_total":         Counter,
+	"taosd_cluster_info_stbs_total":        Counter,
+	"taosd_cluster_info_dnodes_total":      Counter,
+	"taosd_cluster_info_dnodes_alive":      Counter,
+	"taosd_cluster_info_mnodes_total":      Counter,
+	"taosd_cluster_info_mnodes_alive":      Counter,
+	"taosd_cluster_info_vgroups_total":     Counter,
+	"taosd_cluster_info_vgroups_alive":     Counter,
+	"taosd_cluster_info_vnodes_total":      Counter,
+	"taosd_cluster_info_vnodes_alive":      Counter,
+	"taosd_cluster_info_connections_total": Counter,
+	"taosd_cluster_info_topics_total":      Counter,
+	"taosd_cluster_info_streams_total":     Counter,
+
+	"taosd_cluster_info_grants_expire_time":      Counter,
+	"taosd_cluster_info_grants_timeseries_used":  Counter,
+	"taosd_cluster_info_grants_timeseries_total": Counter,
+
+	"taosd_vgroups_info_vgroup_id":     Counter,
+	"taosd_vgroups_info_database_name": Info,
+	"taosd_vgroups_info_tables_num":    Counter,
+	"taosd_vgroups_info_status":        Info,
+
+	"taosd_dnodes_info_uptime":          Gauge,
+	"taosd_dnodes_info_cpu_engine":      Gauge,
+	"taosd_dnodes_info_cpu_system":      Gauge,
+	"taosd_dnodes_info_cpu_cores":       Gauge,
+	"taosd_dnodes_info_mem_engine":      Counter,
+	"taosd_dnodes_info_mem_free":        Counter,
+	"taosd_dnodes_info_mem_total":       Counter,
+	"taosd_dnodes_info_disk_engine":     Counter,
+	"taosd_dnodes_info_disk_used":       Counter,
+	"taosd_dnodes_info_disk_total":      Counter,
+	"taosd_dnodes_info_system_net_in":   Gauge,
+	"taosd_dnodes_info_system_net_out":  Gauge,
+	"taosd_dnodes_info_io_read":         Gauge,
+	"taosd_dnodes_info_io_write":        Gauge,
+	"taosd_dnodes_info_io_read_disk":    Gauge,
+	"taosd_dnodes_info_io_write_disk":   Gauge,
+	"taosd_dnodes_info_vnodes_num":      Counter,
+	"taosd_dnodes_info_masters":         Counter,
+	"taosd_dnodes_info_has_mnode":       Counter,
+	"taosd_dnodes_info_has_qnode":       Counter,
+	"taosd_dnodes_info_has_snode":       Counter,
+	"taosd_dnodes_info_has_bnode":       Counter,
+	"taosd_dnodes_info_errors":          Counter,
+	"taosd_dnodes_info_error_log_count": Counter,
+	"taosd_dnodes_info_info_log_count":  Counter,
+	"taosd_dnodes_info_debug_log_count": Counter,
+	"taosd_dnodes_info_trace_log_count": Counter,
+
+	"taosd_dnodes_status_status": Info,
+
+	"taosd_mnodes_info_role": Info,
+	"taosd_vnodes_info_role": Info,
 }
 
 type CollectType string
@@ -105,7 +165,8 @@ const (
 type Processor struct {
 	prefix           string
 	db               string
-	metrics          map[string]*Table //tableName:*Table{}
+	tableMap         map[string]*Table  //tableName:*Table{}
+	metricMap        map[string]*Metric //Fqname:*Metric{}
 	tableList        []string
 	ctx              context.Context
 	rotationInterval time.Duration
@@ -116,84 +177,76 @@ type Processor struct {
 }
 
 func (p *Processor) Describe(descs chan<- *prometheus.Desc) {
-	for _, tableName := range p.tableList {
-		table := p.metrics[tableName]
-		for _, metric := range table.Metrics {
-			descs <- metric.Desc
-		}
+	for _, metric := range p.metricMap {
+		descs <- metric.Desc
 	}
 }
 
 func (p *Processor) Collect(metrics chan<- prometheus.Metric) {
-	for _, tableName := range p.tableList {
-		table := p.metrics[tableName]
-		for _, metric := range table.NewMetrics {
-			switch metric.Type {
-			case Gauge:
-				gv := prometheus.NewGaugeVec(prometheus.GaugeOpts{
-					Name:        metric.FQName,
-					Help:        metric.Help,
-					ConstLabels: metric.ConstLabels,
-				}, table.Variables)
-				for _, value := range metric.GetValue() {
-					if value.Value == nil {
-						continue
-					}
-					g := gv.With(value.Label)
-					g.Set(value.Value.(float64))
-					metrics <- g
+	for _, metric := range p.metricMap {
+		switch metric.Type {
+		case Gauge:
+			gv := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+				Name:        metric.FQName,
+				Help:        metric.Help,
+				ConstLabels: metric.ConstLabels,
+			}, metric.Variables)
+			for _, value := range metric.GetValue() {
+				if value.Value == nil {
+					continue
 				}
-			case Counter:
-				cv := prometheus.NewCounterVec(prometheus.CounterOpts{
-					Name:        metric.FQName,
-					Help:        metric.Help,
-					ConstLabels: metric.ConstLabels,
-				}, table.Variables)
-				for _, value := range metric.GetValue() {
-					if value.Value == nil {
-						continue
-					}
-					v := i2float(value.Value)
-					if v < 0 {
-						logger.Warningf("negative value for prometheus counter. label %v value %v",
-							value.Label, value.Value)
-						continue
-					}
-					c := cv.With(value.Label)
-					c.Add(v)
-					metrics <- c
-				}
-			case Info:
-				lbs := []string{"value"}
-				lbs = append(lbs, table.Variables...)
-				gf := prometheus.NewGaugeVec(prometheus.GaugeOpts{
-					Name:        metric.FQName,
-					Help:        metric.Help,
-					ConstLabels: metric.ConstLabels,
-				}, lbs)
-				for _, value := range metric.GetValue() {
-					if value == nil {
-						continue
-					}
-					v := make(map[string]string, len(value.Label)+1)
-					v["value"] = value.Value.(string)
-					for k, l := range value.Label {
-						v[k] = l
-					}
-					g := gf.With(v)
-					g.Set(1)
-					metrics <- g
-				}
-			case Summary:
+				g := gv.With(value.Label)
+				g.Set(value.Value.(float64))
+				metrics <- g
 			}
+		case Counter:
+			cv := prometheus.NewCounterVec(prometheus.CounterOpts{
+				Name:        metric.FQName,
+				Help:        metric.Help,
+				ConstLabels: metric.ConstLabels,
+			}, metric.Variables)
+			for _, value := range metric.GetValue() {
+				if value.Value == nil {
+					continue
+				}
+				v := i2float(value.Value)
+				if v < 0 {
+					logger.Warningf("negative value for prometheus counter. label %v value %v",
+						value.Label, value.Value)
+					continue
+				}
+				c := cv.With(value.Label)
+				c.Add(v)
+				metrics <- c
+			}
+		case Info:
+			lbs := []string{"value"}
+			lbs = append(lbs, metric.Variables...)
+			gf := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+				Name:        metric.FQName,
+				Help:        metric.Help,
+				ConstLabels: metric.ConstLabels,
+			}, lbs)
+			for _, value := range metric.GetValue() {
+				if value == nil {
+					continue
+				}
+				v := make(map[string]string, len(value.Label)+1)
+				v["value"] = value.Value.(string)
+				for k, l := range value.Label {
+					v[k] = l
+				}
+				g := gf.With(v)
+				g.Set(1)
+				metrics <- g
+			}
+		case Summary:
 		}
 	}
 }
 
 type Table struct {
 	Variables  []string
-	Metrics    []*Metric
-	NewMetrics map[string]*Metric // column name -> Metric
 	ColumnList []string
 }
 
@@ -204,6 +257,7 @@ type Metric struct {
 	Type        CollectType
 	ColType     int
 	ConstLabels map[string]string
+	Variables   []string
 	Desc        *prometheus.Desc
 	LastValue   []*Value
 }
@@ -242,7 +296,7 @@ func NewProcessor(conf *config.Config) *Processor {
 	p := &Processor{
 		prefix:           conf.Metrics.Prefix,
 		db:               conf.Metrics.Database,
-		metrics:          map[string]*Table{},
+		tableMap:         map[string]*Table{},
 		ctx:              ctx,
 		rotationInterval: interval,
 		exitChan:         make(chan struct{}),
@@ -302,8 +356,8 @@ func (p *Processor) Prepare() {
 				}
 			}
 
-			metrics := make([]*Metric, 0, len(columns))
-			newMetrics := make(map[string]*Metric, len(columns))
+			// metrics := make([]*Metric, 0, len(columns))
+			// newMetrics := make(map[string]*Metric, len(columns))
 			columnList := make([]string, 0, len(columns))
 
 			_, exist := p.summaryTable[tableName]
@@ -319,7 +373,17 @@ func (p *Processor) Prepare() {
 				columnName, metricType := "", Summary
 				if !exist {
 					columnName = column
-					metricType = exchangeDBType(typeList[i])
+
+					if tableName == "taosd_vnodes_info" {
+						logger.Info("tabl")
+						//bbb
+					}
+
+					if _, ok := metricTypeMap[tableName+"_"+columnName]; ok {
+						metricType = metricTypeMap[tableName+"_"+columnName]
+					} else {
+						metricType = exchangeDBType(typeList[i])
+					}
 
 					// 为了兼容性，硬编码，后续要优化
 					if strings.HasSuffix(columnName, "role") {
@@ -338,19 +402,20 @@ func (p *Processor) Prepare() {
 					Help:        "",
 					ConstLabels: labels,
 				}
-				metrics = append(metrics, metric)
-				newMetrics[column] = metric
+				// metrics = append(metrics, metric)
+				// newMetrics[column] = metric
+
+				p.metricMap[fqName] = metric
+
 				columnList = append(columnList, column)
 			}
 
 			t := &Table{
 				Variables:  tags,
-				Metrics:    metrics,
-				NewMetrics: newMetrics,
 				ColumnList: columnList,
 			}
 			locker.Lock()
-			p.metrics[tableName] = t
+			p.tableMap[tableName] = t
 			p.tableList = append(p.tableList, tableName)
 			locker.Unlock()
 
@@ -421,13 +486,18 @@ func (p *Processor) withDBName(tableName string) string {
 }
 
 func (p *Processor) Process() {
+	// 首先清空所有指标值
+	for _, metric := range p.metricMap {
+		metric.SetValue(nil)
+	}
+
 	for _, tableName := range p.tableList {
 		tagIndex := 0
 		hasTag := false
 		b := pool.BytesPoolGet()
 		b.WriteString("select ")
 
-		table := p.metrics[tableName]
+		table := p.tableMap[tableName]
 		columns := table.ColumnList
 		for i, column := range columns {
 			b.WriteString("last_row(`" + column + "`) as `" + column + "`")
@@ -474,11 +544,6 @@ func (p *Processor) Process() {
 			hasTag = true
 		}
 		if len(data.Data) == 0 {
-			for _, column := range table.ColumnList {
-				metric := table.NewMetrics[column]
-				logger.Debugf("set metric [%s] value as %v", column, nil)
-				metric.SetValue(nil)
-			}
 			continue
 		}
 		values := make([][]*Value, len(table.ColumnList))
@@ -499,12 +564,16 @@ func (p *Processor) Process() {
 			}
 			for i, column := range table.ColumnList {
 				var v interface{}
-				metric := table.NewMetrics[column]
+				metric := p.metricMap[p.buildFQName(tableName, column)]
 				switch metric.Type {
 				case Info:
 					_, isFloat := valuesMap[column].(float64)
 					if strings.HasSuffix(column, "role") && valuesMap[column] != nil && isFloat {
 						v = getRoleStr(valuesMap[column].(float64))
+						break
+					}
+					if strings.HasSuffix(column, "status") && valuesMap[column] != nil && isFloat {
+						v = getStatusStr(valuesMap[column].(float64))
 						break
 					}
 
@@ -516,6 +585,9 @@ func (p *Processor) Process() {
 				case Counter, Gauge, Summary:
 					if valuesMap[column] != nil {
 						v = i2float(valuesMap[column])
+						if column == "cluster_uptime" {
+							v = i2float(valuesMap[column]) / 86400
+						}
 					} else {
 						v = nil
 					}
@@ -528,8 +600,11 @@ func (p *Processor) Process() {
 		}
 
 		for i, column := range table.ColumnList {
-			metric := table.NewMetrics[column]
+			metric := p.metricMap[p.buildFQName(tableName, column)]
 			logger.Debugf("set metric [%s] value as %v", column, values[i])
+			if metric.GetValue() != nil {
+				values[i] = append(values[i], metric.GetValue()...)
+			}
 			metric.SetValue(values[i])
 		}
 	}
@@ -565,10 +640,6 @@ func (p *Processor) Close() error {
 	return p.dbConn.Close()
 }
 
-func (p *Processor) GetMetric() map[string]*Table {
-	return p.metrics
-}
-
 func getRoleStr(v float64) string {
 	rounded := math.Round(v)
 	integer := int(rounded)
@@ -590,12 +661,25 @@ func getRoleStr(v float64) string {
 	return "unknown"
 }
 
+func getStatusStr(v float64) string {
+	rounded := math.Round(v)
+	integer := int(rounded)
+
+	switch integer {
+	case 0:
+		return "offline"
+	case 1:
+		return "ready"
+	}
+	return "unknown"
+}
+
 func exchangeDBType(t string) CollectType {
 	switch t {
 	case "BOOL", "FLOAT", "DOUBLE":
 		return Gauge
 	case "TINYINT", "SMALLINT", "INT", "BIGINT", "TINYINT UNSIGNED", "SMALLINT UNSIGNED", "INT UNSIGNED", "BIGINT UNSIGNED":
-		return Gauge
+		return Counter
 	case "BINARY", "NCHAR", "VARCHAR":
 		return Info
 	default:
