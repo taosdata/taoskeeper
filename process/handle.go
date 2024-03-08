@@ -251,7 +251,7 @@ func NewProcessor(conf *config.Config) *Processor {
 		tables:           tables,
 	}
 	p.Prepare()
-	p.process()
+	p.Process()
 	return p
 }
 
@@ -263,13 +263,13 @@ func (p *Processor) Prepare() {
 	for tn := range p.tables {
 		tableName := tn
 
-		if _, ok := needSpecialHandleMap[tableName]; ok {
-			locker.Lock()
-			p.specialHandle(tableName)
-			locker.Unlock()
-			wg.Done()
-			continue
-		}
+		// if _, ok := needSpecialHandleMap[tableName]; ok {
+		// 	locker.Lock()
+		// 	p.specialHandle(tableName)
+		// 	locker.Unlock()
+		// 	wg.Done()
+		// 	continue
+		// }
 
 		err := pool.GoroutinePool.Submit(func() {
 			defer wg.Done()
@@ -363,54 +363,54 @@ func (p *Processor) Prepare() {
 	wg.Wait()
 }
 
-func (p *Processor) specialHandle(specialTableName string) {
-	if specialTableName != "taosd_dnodes_log_dirs" {
-		return
-	}
-	labels := make(map[string]string)
-	metrics := make([]*Metric, 0, 4)
-	newMetrics := make(map[string]*Metric, 4)
-	columnList := make([]string, 0, 4)
+// func (p *Processor) specialHandle(specialTableName string) {
+// 	if specialTableName != "taosd_dnodes_log_dirs" {
+// 		return
+// 	}
+// 	labels := make(map[string]string)
+// 	metrics := make([]*Metric, 0, 4)
+// 	newMetrics := make(map[string]*Metric, 4)
+// 	columnList := make([]string, 0, 4)
 
-	for _, tbName := range []string{"temp_dir", "log_dirs"} {
-		for _, columnName := range []string{"avail", "used", "total"} {
-			fqName := p.buildFQName(tbName, columnName)
-			pDesc := prometheus.NewDesc(fqName, "", nil, nil)
-			metric := &Metric{
-				Type:        Gauge,
-				Desc:        pDesc,
-				FQName:      fqName,
-				Help:        "",
-				ConstLabels: labels,
-			}
-			metrics = append(metrics, metric)
-			newMetrics[columnName] = metric
-			columnList = append(columnList, columnName)
-		}
+// 	for _, tbName := range []string{"temp_dir", "log_dirs"} {
+// 		for _, columnName := range []string{"avail", "used", "total"} {
+// 			fqName := p.buildFQName(tbName, columnName)
+// 			pDesc := prometheus.NewDesc(fqName, "", nil, nil)
+// 			metric := &Metric{
+// 				Type:        Gauge,
+// 				Desc:        pDesc,
+// 				FQName:      fqName,
+// 				Help:        "",
+// 				ConstLabels: labels,
+// 			}
+// 			metrics = append(metrics, metric)
+// 			newMetrics[columnName] = metric
+// 			columnList = append(columnList, columnName)
+// 		}
 
-		fqName := p.buildFQName(tbName, "name")
-		pDesc := prometheus.NewDesc(fqName, "", nil, nil)
-		metric := &Metric{
-			Type:        Info,
-			Desc:        pDesc,
-			FQName:      fqName,
-			Help:        "",
-			ConstLabels: labels,
-		}
-		metrics = append(metrics, metric)
-		newMetrics["name"] = metric
-		columnList = append(columnList, "name")
+// 		fqName := p.buildFQName(tbName, "name")
+// 		pDesc := prometheus.NewDesc(fqName, "", nil, nil)
+// 		metric := &Metric{
+// 			Type:        Info,
+// 			Desc:        pDesc,
+// 			FQName:      fqName,
+// 			Help:        "",
+// 			ConstLabels: labels,
+// 		}
+// 		metrics = append(metrics, metric)
+// 		newMetrics["name"] = metric
+// 		columnList = append(columnList, "name")
 
-		t := &Table{
-			Variables:  []string{"dnode_id", "dnode_ep", "cluster_id"},
-			Metrics:    metrics,
-			NewMetrics: newMetrics,
-			ColumnList: columnList,
-		}
-		p.metrics[specialTableName] = t
-		p.tableList = append(p.tableList, specialTableName)
-	}
-}
+// 		t := &Table{
+// 			Variables:  []string{"dnode_id", "dnode_ep", "cluster_id"},
+// 			Metrics:    metrics,
+// 			NewMetrics: newMetrics,
+// 			ColumnList: columnList,
+// 		}
+// 		p.metrics[specialTableName] = t
+// 		p.tableList = append(p.tableList, specialTableName)
+// 	}
+// }
 
 func (p *Processor) withDBName(tableName string) string {
 	b := pool.BytesPoolGet()
@@ -420,7 +420,7 @@ func (p *Processor) withDBName(tableName string) string {
 	return b.String()
 }
 
-func (p *Processor) process() {
+func (p *Processor) Process() {
 	for _, tableName := range p.tableList {
 		tagIndex := 0
 		hasTag := false
@@ -445,6 +445,13 @@ func (p *Processor) process() {
 
 		b.WriteString(" from ")
 		b.WriteString(p.withDBName(tableName))
+
+		if tableName != "taosd_cluster_info" && strings.HasPrefix(tableName, "taosd_") {
+			b.WriteString(" WHERE _ts > (NOW() - 1m) ")
+		} else {
+			b.WriteString(" WHERE ts > (NOW() - 1m) ")
+		}
+
 		if len(table.Variables) > 0 {
 			tagIndex = len(columns)
 			b.WriteString(" group by ")
@@ -467,6 +474,11 @@ func (p *Processor) process() {
 			hasTag = true
 		}
 		if len(data.Data) == 0 {
+			for _, column := range table.ColumnList {
+				metric := table.NewMetrics[column]
+				logger.Debugf("set metric [%s] value as %v", column, nil)
+				metric.SetValue(nil)
+			}
 			continue
 		}
 		values := make([][]*Value, len(table.ColumnList))
@@ -513,18 +525,6 @@ func (p *Processor) process() {
 					Value: v,
 				})
 			}
-		}
-
-		if tableName == "taosd_dnodes_log_dirs" {
-			for i, column := range table.ColumnList {
-
-				// values[i].v
-
-				metric := table.NewMetrics[column]
-				logger.Debugf("set metric [%s] value as %v", column, values[i])
-				metric.SetValue(values[i])
-			}
-			continue
 		}
 
 		for i, column := range table.ColumnList {
