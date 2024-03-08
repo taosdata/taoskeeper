@@ -402,6 +402,7 @@ func (p *Processor) Prepare() {
 					FQName:      fqName,
 					Help:        "",
 					ConstLabels: labels,
+					Variables:   tags,
 				}
 				// metrics = append(metrics, metric)
 				// newMetrics[column] = metric
