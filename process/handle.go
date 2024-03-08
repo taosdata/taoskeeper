@@ -297,6 +297,7 @@ func NewProcessor(conf *config.Config) *Processor {
 		prefix:           conf.Metrics.Prefix,
 		db:               conf.Metrics.Database,
 		tableMap:         map[string]*Table{},
+		metricMap:        map[string]*Metric{},
 		ctx:              ctx,
 		rotationInterval: interval,
 		exitChan:         make(chan struct{}),
