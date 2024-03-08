@@ -83,7 +83,7 @@ var metricNameMap = map[string]string{
 	"taosd_dnodes_status_status": "d_info_status",
 
 	"taosd_mnodes_info_role": "m_info_role",
-	"taosd_vnodes_info_role": "vnodes_role_vnode_role",
+	//"taosd_vnodes_info_role": "vnodes_role_vnode_role",
 
 	// "taosd_dnodes_log_dirs_used":  "log_dir_used",
 	// "taosd_dnodes_log_dirs_avail": "log_dir_avail",
@@ -150,7 +150,8 @@ var metricTypeMap = map[string]CollectType{
 	"taosd_dnodes_status_status": Info,
 
 	"taosd_mnodes_info_role": Info,
-	"taosd_vnodes_info_role": Info,
+
+	//"taosd_vnodes_info_role": Info,
 }
 
 type CollectType string
