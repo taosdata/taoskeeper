@@ -85,6 +85,12 @@ func (r *Reporter) detectGrantInfoFieldType() {
 	r.detectFieldType(ctx, conn, "grants_info", "expire_time", "bigint")
 	r.detectFieldType(ctx, conn, "grants_info", "timeseries_used", "bigint")
 	r.detectFieldType(ctx, conn, "grants_info", "timeseries_total", "bigint")
+	if r.tagExist(ctx, conn, "grants_info", "dnode_id") {
+		r.dropTag(ctx, conn, "grants_info", "dnode_id")
+	}
+	if r.tagExist(ctx, conn, "grants_info", "dnode_ep") {
+		r.dropTag(ctx, conn, "grants_info", "dnode_ep")
+	}
 }
 
 func (r *Reporter) detectClusterInfoFieldType() {
@@ -96,14 +102,14 @@ func (r *Reporter) detectClusterInfoFieldType() {
 	r.detectFieldType(ctx, conn, "cluster_info", "tbs_total", "bigint")
 
 	// add column `topics_total` and `streams_total` from TD-22032
-	if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "topics_total"); !exists {
-		logger.Warningf("## %s.cluster_info.topics_total not exists, will add it", r.dbname)
-		r.addColumn(ctx, conn, "cluster_info", "topics_total", "int")
-	}
-	if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "streams_total"); !exists {
-		logger.Warningf("## %s.cluster_info.streams_total not exists, will add it", r.dbname)
-		r.addColumn(ctx, conn, "cluster_info", "streams_total", "int")
-	}
+	// if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "topics_total"); !exists {
+	// 	logger.Warningf("## %s.cluster_info.topics_total not exists, will add it", r.dbname)
+	// 	r.addColumn(ctx, conn, "cluster_info", "topics_total", "int")
+	// }
+	// if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "streams_total"); !exists {
+	// 	logger.Warningf("## %s.cluster_info.streams_total not exists, will add it", r.dbname)
+	// 	r.addColumn(ctx, conn, "cluster_info", "streams_total", "int")
+	// }
 }
 
 func (r *Reporter) detectVgroupsInfoType() {
@@ -200,9 +206,37 @@ func (r *Reporter) columnInfo(ctx context.Context, conn *db.Connector, table str
 	return
 }
 
+func (r *Reporter) tagExist(ctx context.Context, conn *db.Connector, stable string, tag string) (exists bool) {
+	res, err := conn.Query(ctx, fmt.Sprintf("select tag_name from information_schema.ins_tags where stable_name='%s' and db_name='%s' and tag_name='%s'", stable, r.dbname, tag))
+	if err != nil {
+		logger.WithError(err).Errorf("get %s tag_name error", r.dbname)
+		panic(err)
+	}
+
+	if len(res.Data) == 0 {
+		exists = false
+		return
+	}
+
+	if len(res.Data) != 1 && len(res.Data[0]) != 1 {
+		logger.Errorf("get tag_name for %s error. response is %+v", stable, res)
+		panic(fmt.Sprintf("get tag_name for %s error. response is %+v", stable, res))
+	}
+
+	exists = true
+	return
+}
+
 func (r *Reporter) dropColumn(ctx context.Context, conn *db.Connector, table string, field string) {
 	if _, err := conn.Exec(ctx, fmt.Sprintf("alter table %s.%s drop column %s", r.dbname, table, field)); err != nil {
 		logger.WithError(err).Errorf("drop column %s from table %s error", field, table)
+		panic(err)
+	}
+}
+
+func (r *Reporter) dropTag(ctx context.Context, conn *db.Connector, stable string, tag string) {
+	if _, err := conn.Exec(ctx, fmt.Sprintf("alter stable %s.%s drop tag %s", r.dbname, stable, tag)); err != nil {
+		logger.WithError(err).Errorf("drop tag %s from stable %s error", tag, stable)
 		panic(err)
 	}
 }
@@ -304,7 +338,7 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 			logger.WithError(err).Errorf("connect to database error")
 			return
 		}
-		defer closeConn(conn)
+		defer r.closeConn(conn)
 		ctx := context.Background()
 
 		for _, sql := range sqls {
