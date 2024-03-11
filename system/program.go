@@ -28,10 +28,17 @@ func Init() *http.Server {
 	reporter := api.NewReporter(conf)
 	reporter.Init(router)
 	monitor.StartMonitor("", conf, reporter)
-	processor := process.NewProcessor(conf)
+	go func() {
+		// wait for monitor to all metric received
+		time.Sleep(time.Second * 35)
+
+		processor := process.NewProcessor(conf)
+		node := api.NewNodeExporter(processor)
+		node.Init(router)
+	}()
+
 	api.NewAdapterImporter(conf)
-	node := api.NewNodeExporter(processor)
-	node.Init(router)
+
 	checkHealth := api.NewCheckHealth(version.Version)
 	checkHealth.Init(router)
 	audit, err := api.NewAudit(conf)

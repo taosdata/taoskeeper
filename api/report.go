@@ -57,7 +57,6 @@ func NewReporter(conf *config.Config) *Reporter {
 
 func (r *Reporter) Init(c gin.IRouter) {
 	c.POST("report", r.handlerFunc())
-
 	r.createDatabase()
 	r.creatTables()
 	// todo: it can delete in the future.
@@ -339,7 +338,7 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 			logger.WithError(err).Errorf("connect to database error")
 			return
 		}
-		defer closeConn(conn)
+		defer r.closeConn(conn)
 		ctx := context.Background()
 
 		for _, sql := range sqls {

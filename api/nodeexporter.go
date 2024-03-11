@@ -25,13 +25,8 @@ func (z *NodeExporter) Init(c gin.IRouter) {
 
 func (z *NodeExporter) myMiddleware(next http.Handler) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		z.PrepareData()
+		z.processor.Process()
 		// call Prometheus handler
 		next.ServeHTTP(c.Writer, c.Request)
 	}
-}
-
-func (z *NodeExporter) PrepareData() {
-	z.processor.RefreshMeta()
-	z.processor.Process()
 }
