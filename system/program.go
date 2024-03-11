@@ -65,7 +65,7 @@ func Init() *http.Server {
 	return server
 }
 
-func Start(server *http.Server) {
+func Start(server *http.Server) service.Service {
 	prg := newProgram(server)
 	svcConfig := &service.Config{
 		Name:        "taoskeeper",
@@ -80,6 +80,7 @@ func Start(server *http.Server) {
 	if err != nil {
 		logger.Fatal(err)
 	}
+	return s
 }
 
 type program struct {
