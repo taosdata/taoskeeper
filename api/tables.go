@@ -276,7 +276,7 @@ var CreateGrantInfoSql = "create table if not exists grants_info(" +
 	"expire_time bigint, " +
 	"timeseries_used bigint, " +
 	"timeseries_total bigint " +
-	") tags (dnode_id int, dnode_ep nchar(" + dnodeEpLen + "), cluster_id nchar(32))"
+	") tags (cluster_id nchar(32))"
 
 var CreateKeeperSql = "create table if not exists keeper_monitor (" +
 	"ts timestamp, " +
