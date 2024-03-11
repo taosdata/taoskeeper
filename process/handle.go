@@ -47,11 +47,6 @@ var metricNameMap = map[string]string{
 	"taosd_cluster_info_grants_timeseries_used":  "grants_info_timeseries_used",
 	"taosd_cluster_info_grants_timeseries_total": "grants_info_timeseries_total",
 
-	// "taosd_vgroups_info_vgroup_id":     "vgroups_info_vgroup_id",
-	// "taosd_vgroups_info_database_name": "vgroups_info_database_name",
-	// "taosd_vgroups_info_tables_num":    "vgroups_info_tables_num",
-	// "taosd_vgroups_info_status":        "vgroups_info_status",
-
 	"taosd_dnodes_info_uptime":          "dnodes_info_uptime",
 	"taosd_dnodes_info_cpu_engine":      "dnodes_info_cpu_engine",
 	"taosd_dnodes_info_cpu_system":      "dnodes_info_cpu_system",
@@ -83,10 +78,6 @@ var metricNameMap = map[string]string{
 	"taosd_dnodes_status_status": "d_info_status",
 
 	"taosd_mnodes_info_role": "m_info_role",
-	//"taosd_vnodes_info_role": "vnodes_role_vnode_role",
-
-	// "taosd_dnodes_log_dirs_used":  "log_dir_used",
-	// "taosd_dnodes_log_dirs_avail": "log_dir_avail",
 }
 
 var metricTypeMap = map[string]CollectType{
@@ -113,11 +104,6 @@ var metricTypeMap = map[string]CollectType{
 	"taosd_cluster_info_grants_expire_time":      Counter,
 	"taosd_cluster_info_grants_timeseries_used":  Counter,
 	"taosd_cluster_info_grants_timeseries_total": Counter,
-
-	// "taosd_vgroups_info_vgroup_id":     Counter,
-	// "taosd_vgroups_info_database_name": Info,
-	// "taosd_vgroups_info_tables_num":    Counter,
-	// "taosd_vgroups_info_status":        Info,
 
 	"taosd_dnodes_info_uptime":          Gauge,
 	"taosd_dnodes_info_cpu_engine":      Gauge,
@@ -150,8 +136,6 @@ var metricTypeMap = map[string]CollectType{
 	"taosd_dnodes_status_status": Info,
 
 	"taosd_mnodes_info_role": Info,
-
-	//"taosd_vnodes_info_role": Info,
 }
 
 type CollectType string
@@ -322,14 +306,6 @@ func (p *Processor) Prepare() {
 	for tn := range p.tables {
 		tableName := tn
 
-		// if _, ok := needSpecialHandleMap[tableName]; ok {
-		// 	locker.Lock()
-		// 	p.specialHandle(tableName)
-		// 	locker.Unlock()
-		// 	wg.Done()
-		// 	continue
-		// }
-
 		err := pool.GoroutinePool.Submit(func() {
 			defer wg.Done()
 			data, err := p.dbConn.Query(p.ctx, fmt.Sprintf("describe %s", p.withDBName(tableName)))
@@ -438,55 +414,6 @@ func (p *Processor) Prepare() {
 
 	wg.Wait()
 }
-
-// func (p *Processor) specialHandle(specialTableName string) {
-// 	if specialTableName != "taosd_dnodes_log_dirs" {
-// 		return
-// 	}
-// 	labels := make(map[string]string)
-// 	metrics := make([]*Metric, 0, 4)
-// 	newMetrics := make(map[string]*Metric, 4)
-// 	columnList := make([]string, 0, 4)
-
-// 	for _, tbName := range []string{"temp_dir", "log_dirs"} {
-// 		for _, columnName := range []string{"avail", "used", "total"} {
-// 			fqName := p.buildFQName(tbName, columnName)
-// 			pDesc := prometheus.NewDesc(fqName, "", nil, nil)
-// 			metric := &Metric{
-// 				Type:        Gauge,
-// 				Desc:        pDesc,
-// 				FQName:      fqName,
-// 				Help:        "",
-// 				ConstLabels: labels,
-// 			}
-// 			metrics = append(metrics, metric)
-// 			newMetrics[columnName] = metric
-// 			columnList = append(columnList, columnName)
-// 		}
-
-// 		fqName := p.buildFQName(tbName, "name")
-// 		pDesc := prometheus.NewDesc(fqName, "", nil, nil)
-// 		metric := &Metric{
-// 			Type:        Info,
-// 			Desc:        pDesc,
-// 			FQName:      fqName,
-// 			Help:        "",
-// 			ConstLabels: labels,
-// 		}
-// 		metrics = append(metrics, metric)
-// 		newMetrics["name"] = metric
-// 		columnList = append(columnList, "name")
-
-// 		t := &Table{
-// 			Variables:  []string{"dnode_id", "dnode_ep", "cluster_id"},
-// 			Metrics:    metrics,
-// 			NewMetrics: newMetrics,
-// 			ColumnList: columnList,
-// 		}
-// 		p.metrics[specialTableName] = t
-// 		p.tableList = append(p.tableList, specialTableName)
-// 	}
-// }
 
 func (p *Processor) withDBName(tableName string) string {
 	b := pool.BytesPoolGet()
