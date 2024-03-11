@@ -103,14 +103,14 @@ func (r *Reporter) detectClusterInfoFieldType() {
 	r.detectFieldType(ctx, conn, "cluster_info", "tbs_total", "bigint")
 
 	// add column `topics_total` and `streams_total` from TD-22032
-	if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "topics_total"); !exists {
-		logger.Warningf("## %s.cluster_info.topics_total not exists, will add it", r.dbname)
-		r.addColumn(ctx, conn, "cluster_info", "topics_total", "int")
-	}
-	if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "streams_total"); !exists {
-		logger.Warningf("## %s.cluster_info.streams_total not exists, will add it", r.dbname)
-		r.addColumn(ctx, conn, "cluster_info", "streams_total", "int")
-	}
+	// if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "topics_total"); !exists {
+	// 	logger.Warningf("## %s.cluster_info.topics_total not exists, will add it", r.dbname)
+	// 	r.addColumn(ctx, conn, "cluster_info", "topics_total", "int")
+	// }
+	// if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "streams_total"); !exists {
+	// 	logger.Warningf("## %s.cluster_info.streams_total not exists, will add it", r.dbname)
+	// 	r.addColumn(ctx, conn, "cluster_info", "streams_total", "int")
+	// }
 }
 
 func (r *Reporter) detectVgroupsInfoType() {
