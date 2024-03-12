@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -46,6 +47,17 @@ type AuditArrayInfo struct {
 	Records []AuditInfo `json:"records"`
 }
 
+type AuditInfoOld struct {
+	Timestamp int64  `json:"timestamp"`
+	ClusterID string `json:"cluster_id"`
+	User      string `json:"user"`
+	Operation string `json:"operation"`
+	Db        string `json:"db"`
+	Resource  string `json:"resource"`
+	ClientAdd string `json:"client_add"` // client address
+	Details   string `json:"details"`
+}
+
 func NewAudit(c *config.Config) (*Audit, error) {
 	a := Audit{
 		username:  c.TDengine.Username,
@@ -71,7 +83,8 @@ func (a *Audit) Init(c gin.IRouter) error {
 	if err := a.createSTables(); err != nil {
 		return fmt.Errorf("create stable error: %s", err)
 	}
-	c.POST("/audit", a.handleFunc())
+	c.POST("/audit", a.handleFuncOld())
+	c.POST("/audit_v2", a.handleFunc())
 	c.POST("/audit-batch", a.handleBatchFunc())
 	return nil
 }
@@ -156,6 +169,45 @@ func (a *Audit) handleFunc() gin.HandlerFunc {
 	}
 }
 
+func (a *Audit) handleFuncOld() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if a.conn == nil {
+			auditLogger.Error("no connection")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "no connection"})
+			return
+		}
+
+		data, err := c.GetRawData()
+		if err != nil {
+			auditLogger.WithError(err).Errorf("## get old audit data error")
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get audit data error. %s", err)})
+			return
+		}
+		auditLogger.Trace("## receive audit data", "data", string(data))
+
+		var audit AuditInfoOld
+		if err := json.Unmarshal(data, &audit); err != nil {
+			auditLogger.WithError(err).Errorf("## parse old audit data %s error", string(data))
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse audit data error: %s", err)})
+			return
+		}
+
+		sql := parseSqlOld(audit)
+		if err != nil {
+			auditLogger.WithError(err).Errorf("## parse old audit sql error")
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("timestamp format error. %s", err)})
+			return
+		}
+
+		if _, err = a.conn.Exec(context.Background(), sql); err != nil {
+			auditLogger.WithError(err).Error("##save old audit data error", "sql", sql)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("save audit data error: %s", err)})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{})
+	}
+}
+
 func handleDetails(details string) string {
 	if strings.Contains(details, "'") {
 		details = strings.ReplaceAll(details, "'", "\\'")
@@ -175,6 +227,14 @@ func parseSql(audit AuditInfo) string {
 	return fmt.Sprintf(
 		"insert into %s using operations tags ('%s') values (%s, '%s', '%s', '%s', '%s', '%s', '%s') ",
 		getTableName(audit), audit.ClusterID, audit.Timestamp, audit.User, audit.Operation, audit.Db, audit.Resource, audit.ClientAdd, details)
+}
+
+func parseSqlOld(audit AuditInfoOld) string {
+	details := handleDetails(audit.Details)
+
+	return fmt.Sprintf(
+		"insert into %s using operations tags ('%s') values (%s, '%s', '%s', '%s', '%s', '%s', '%s') ",
+		getTableNameOld(audit), audit.ClusterID, strconv.FormatInt(audit.Timestamp, 10)+"000000", audit.User, audit.Operation, audit.Db, audit.Resource, audit.ClientAdd, details)
 }
 
 func handleBatchRecord(auditArray []AuditInfo, conn *db.Connector) error {
@@ -214,6 +274,9 @@ func handleBatchRecord(auditArray []AuditInfo, conn *db.Connector) error {
 }
 
 func getTableName(audit AuditInfo) string {
+	return fmt.Sprintf("t_operations_%s", audit.ClusterID)
+}
+func getTableNameOld(audit AuditInfoOld) string {
 	return fmt.Sprintf("t_operations_%s", audit.ClusterID)
 }
 
