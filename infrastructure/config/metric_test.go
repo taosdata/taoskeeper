@@ -2,6 +2,8 @@ package config_test
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/BurntSushi/toml"
@@ -35,4 +37,29 @@ password = "taosdata"
 	}
 	assert.EqualValues(t, c, c)
 	fmt.Print(c)
+}
+func TestBakConfig(t *testing.T) {
+	copyConfigFile()
+	config.Name = "aaaa"
+	config.InitConfig()
+}
+func copyConfigFile() {
+	sourceFile := "/etc/taos/taoskeeper.toml"
+	destinationFile := "/etc/taos/keeper.toml"
+
+	source, err := os.Open(sourceFile) //open the source file
+	if err != nil {
+		panic(err)
+	}
+	defer source.Close()
+
+	destination, err := os.Create(destinationFile) //create the destination file
+	if err != nil {
+		panic(err)
+	}
+	defer destination.Close()
+	_, err = io.Copy(destination, source) //copy the contents of source to destination file
+	if err != nil {
+		panic(err)
+	}
 }
