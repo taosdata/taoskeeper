@@ -1,12 +1,20 @@
 package log
 
 import (
-	"github.com/taosdata/taoskeeper/infrastructure/log"
+	"fmt"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"testing"
+	"time"
 )
 
-var logger = log.GetLogger("log")
-
 func TestConfigLog(t *testing.T) {
-	log.IsDebug()
+	config.InitConfig()
+	config.Conf.LogLevel = "debug"
+	ConfigLog()
+	debug, _ := logrus.ParseLevel("debug")
+	assert.Equal(t, logger.Level, debug)
+	assert.Equal(t, true, IsDebug())
+	fmt.Print(GetLogNow(true), GetLogDuration(true, time.Now()))
 }
