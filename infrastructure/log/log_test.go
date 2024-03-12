@@ -1,6 +1,7 @@
 package log
 
 import (
+	"context"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -17,4 +18,5 @@ func TestConfigLog(t *testing.T) {
 	assert.Equal(t, logger.Level, debug)
 	assert.Equal(t, true, IsDebug())
 	fmt.Print(GetLogNow(true), GetLogDuration(true, time.Now()))
+	Close(context.Background())
 }
