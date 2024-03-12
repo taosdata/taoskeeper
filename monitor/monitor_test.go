@@ -8,10 +8,11 @@ import (
 )
 
 func TestStart(t *testing.T) {
-	conf, err := getConfig()
-	if err != nil {
-		panic(err)
+	conf := config.InitConfig()
+	if conf == nil {
+		panic("config error")
 	}
+	conf.Env.InCGroup = true
 	interval, err := time.ParseDuration(conf.RotationInterval)
 	if err != nil {
 		panic(err)
@@ -31,10 +32,10 @@ port = 6043
 loglevel = "info"
 
 # go pool size
-gopoolsize = 50000
+#gopoolsize = 50000
 
 # interval for metrics
-RotationInterval = "5s"
+#RotationInterval = "5s"
 
 [tdengine]
 host = "127.0.0.1"
