@@ -2,14 +2,18 @@ package config_test
 
 import (
 	"fmt"
+	"github.com/taosdata/taoskeeper/infrastructure/log"
 	"io"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/stretchr/testify/assert"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 )
+
+var logger = log.GetLogger("infrastructure")
 
 func TestConfig(t *testing.T) {
 	data := `
@@ -41,9 +45,14 @@ password = "taosdata"
 func TestBakConfig(t *testing.T) {
 	copyConfigFile()
 	config.Name = "aaa"
-	config.InitConfig()
+
+	conf := config.InitConfig()
+	fmt.Print(log.IsDebug(), log.GetLogNow(true), log.GetLogDuration(true, time.Now()))
+	logger.Debug(conf)
 	config.Name = "taoskeeper"
+
 }
+
 func copyConfigFile() {
 	sourceFile := "/etc/taos/taoskeeper.toml"
 	destinationFile := "/etc/taos/keeper.toml"
