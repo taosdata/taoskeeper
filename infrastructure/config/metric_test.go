@@ -40,8 +40,9 @@ password = "taosdata"
 }
 func TestBakConfig(t *testing.T) {
 	copyConfigFile()
-	config.Name = "aaaa"
+	config.Name = "aaa"
 	config.InitConfig()
+	config.Name = "taoskeeper"
 }
 func copyConfigFile() {
 	sourceFile := "/etc/taos/taoskeeper.toml"
