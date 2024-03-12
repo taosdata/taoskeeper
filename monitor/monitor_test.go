@@ -18,4 +18,8 @@ func TestStart(t *testing.T) {
 		panic(err)
 	}
 	Start(interval, conf.Env.InCGroup)
+	for k, _ := range SysMonitor.outputs {
+		SysMonitor.Deregister(k)
+	}
+
 }
