@@ -570,6 +570,10 @@ func (p *Processor) buildFQName(tableName string, column string) string {
 	return fqName
 }
 
+func (p *Processor) GetMetric() map[string]*Table {
+	return p.tableMap
+}
+
 func (p *Processor) Close() error {
 	close(p.exitChan)
 	return p.dbConn.Close()

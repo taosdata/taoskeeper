@@ -184,7 +184,7 @@ var adapterTableSql = "create stable if not exists `adapter_requests` (" +
 
 func (a *Adapter) createTable() error {
 	if a.conn == nil {
-		return noConnectionError
+		return errNoConnection
 	}
 	_, err := a.conn.Exec(context.Background(), adapterTableSql)
 	return err
