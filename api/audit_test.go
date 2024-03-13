@@ -70,6 +70,20 @@ func TestAudit(t *testing.T) {
 		},
 	}
 
+	cases2 := []struct {
+		name   string
+		ts     int64
+		detail string
+		data   string
+		expect string
+	}{
+		{
+			name:   "1",
+			ts:     1699839716445000000,
+			data:   `{"timestamp":1699839716445, "cluster_id": "cluster_id", "user": "user", "operation": "operation", "db":"dbnamea", "resource":"resourcenamea", "client_add": "localhost:30000", "details": "details"}`,
+			expect: "details",
+		},
+	}
 	conn, err := db.NewConnectorWithDb(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.Audit.Database.Name)
 	assert.NoError(t, err)
 	defer func() {
@@ -77,6 +91,21 @@ func TestAudit(t *testing.T) {
 	}()
 
 	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			body := strings.NewReader(c.data)
+			req, _ := http.NewRequest(http.MethodPost, "/audit", body)
+			router.ServeHTTP(w, req)
+			assert.Equal(t, 200, w.Code)
+
+			data, err := conn.Query(context.Background(), fmt.Sprintf("select ts, details from %s.operations where ts=%d", cfg.Audit.Database.Name, c.ts))
+			assert.NoError(t, err)
+			assert.Equal(t, 1, len(data.Data))
+			assert.Equal(t, c.expect, data.Data[0][1])
+		})
+	}
+
+	for _, c := range cases2 {
 		t.Run(c.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			body := strings.NewReader(c.data)
