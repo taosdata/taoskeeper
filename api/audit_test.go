@@ -94,7 +94,7 @@ func TestAudit(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			body := strings.NewReader(c.data)
-			req, _ := http.NewRequest(http.MethodPost, "/audit_v2", body)
+			req, _ := http.NewRequest(http.MethodPost, "/audit", body)
 			router.ServeHTTP(w, req)
 			assert.Equal(t, 200, w.Code)
 
