@@ -9,6 +9,7 @@ import (
 
 	"github.com/taosdata/go-utils/web"
 	"github.com/taosdata/taoskeeper/api"
+	"github.com/taosdata/taoskeeper/cmd/command"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
 	"github.com/taosdata/taoskeeper/monitor"
@@ -23,6 +24,12 @@ var logger = log.GetLogger("program")
 func Init() *http.Server {
 	conf := config.InitConfig()
 	log.ConfigLog()
+
+	if len(conf.Transfer) > 0 || len(conf.Drop) > 0 {
+		command.Process(conf)
+		return nil
+	}
+
 	router := web.CreateRouter(conf.Debug, &conf.Cors, false)
 
 	reporter := api.NewReporter(conf)

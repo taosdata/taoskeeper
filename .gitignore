@@ -16,4 +16,5 @@ vendor
 /debug/
 /.idea/
 /taoskeeper
+/test_data
 /.vscode
