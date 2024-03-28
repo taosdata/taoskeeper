@@ -5,8 +5,10 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/stretchr/testify/assert"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
+	"github.com/taosdata/taoskeeper/version"
 	"io"
 	"os"
+	"runtime"
 	"testing"
 )
 
@@ -48,8 +50,16 @@ func TestBakConfig(t *testing.T) {
 }
 
 func copyConfigFile() {
-	sourceFile := "/etc/taos/taoskeeper.toml"
-	destinationFile := "/etc/taos/keeper.toml"
+	var sourceFile string
+	var destinationFile string
+	switch runtime.GOOS {
+	case "windows":
+		sourceFile = fmt.Sprintf("config path default C:\\%s\\cfg\\%s.toml", version.CUS_NAME, "taoskeeper")
+		destinationFile = fmt.Sprintf("config path default C:\\%s\\cfg\\%s.toml", version.CUS_NAME, "keeper")
+	default:
+		sourceFile = fmt.Sprintf("config path default /etc/%s/%s.toml", version.CUS_PROMPT, "taoskeeper")
+		destinationFile = fmt.Sprintf("config path default C:\\%s\\cfg\\%s.toml", version.CUS_NAME, "keeper")
+	}
 
 	source, err := os.Open(sourceFile) //open the source file
 	if err != nil {
