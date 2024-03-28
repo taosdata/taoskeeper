@@ -20,7 +20,7 @@ func TestStart(t *testing.T) {
 
 	log.ConfigLog()
 	router := web.CreateRouter(conf.Debug, &conf.Cors, false)
-
+	conf.Metrics.Database = "monitor"
 	reporter := api.NewReporter(conf)
 	reporter.Init(router)
 	conf.RotationInterval = "1s"
