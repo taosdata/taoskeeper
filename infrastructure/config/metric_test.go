@@ -40,16 +40,15 @@ password = "taosdata"
 	fmt.Print(c)
 }
 func TestBakConfig(t *testing.T) {
-	copyConfigFile()
-	config.Name = "aaa"
-
-	config.InitConfig()
-
-	config.Name = "taoskeeper"
-
+	isOk := copyConfigFile()
+	if isOk {
+		config.Name = "aaa"
+		config.InitConfig()
+		config.Name = "taoskeeper"
+	}
 }
 
-func copyConfigFile() {
+func copyConfigFile() bool {
 	var sourceFile string
 	var destinationFile string
 	switch runtime.GOOS {
@@ -59,6 +58,10 @@ func copyConfigFile() {
 	default:
 		sourceFile = fmt.Sprintf("/etc/%s/%s.toml", version.CUS_PROMPT, "taoskeeper")
 		destinationFile = fmt.Sprintf("/etc/%s/%s.toml", version.CUS_PROMPT, "keeper")
+	}
+	_, err := os.Stat(sourceFile)
+	if os.IsNotExist(err) {
+		return false
 	}
 
 	source, err := os.Open(sourceFile) //open the source file
