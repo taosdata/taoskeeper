@@ -58,7 +58,7 @@ func copyConfigFile() {
 		destinationFile = fmt.Sprintf("C:\\%s\\cfg\\%s.toml", version.CUS_NAME, "keeper")
 	default:
 		sourceFile = fmt.Sprintf("/etc/%s/%s.toml", version.CUS_PROMPT, "taoskeeper")
-		destinationFile = fmt.Sprintf("C:\\%s\\cfg\\%s.toml", version.CUS_NAME, "keeper")
+		destinationFile = fmt.Sprintf("/etc/%s/%s.toml", version.CUS_PROMPT, "keeper")
 	}
 
 	source, err := os.Open(sourceFile) //open the source file
