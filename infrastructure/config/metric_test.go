@@ -79,4 +79,5 @@ func copyConfigFile() bool {
 	if err != nil {
 		panic(err)
 	}
+	return true
 }
