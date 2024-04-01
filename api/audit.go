@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -146,18 +147,37 @@ func (a *Audit) handleFunc() gin.HandlerFunc {
 		}
 		auditLogger.Trace("## receive audit data", "data", string(data))
 
-		var audit AuditInfo
-		if err := json.Unmarshal(data, &audit); err != nil {
-			auditLogger.WithError(err).Errorf("## parse audit data %s error", string(data))
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse audit data error: %s", err)})
-			return
-		}
+		sql := ""
 
-		sql := parseSql(audit)
-		if err != nil {
-			auditLogger.WithError(err).Errorf("## parse sql error")
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("timestamp format error. %s", err)})
-			return
+		isStrTime, _ := regexp.MatchString(`"timestamp"\s*:\s*"[^"]*"`, string(data))
+		if isStrTime {
+			var audit AuditInfo
+			if err := json.Unmarshal(data, &audit); err != nil {
+				auditLogger.WithError(err).Errorf("## parse audit data %s error", string(data))
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse audit data error: %s", err)})
+				return
+			}
+
+			sql = parseSql(audit)
+			if err != nil {
+				auditLogger.WithError(err).Errorf("## parse sql error")
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("timestamp format error. %s", err)})
+				return
+			}
+		} else {
+			var audit AuditInfoOld
+			if err := json.Unmarshal(data, &audit); err != nil {
+				auditLogger.WithError(err).Errorf("## parse old audit data %s error", string(data))
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse audit data error: %s", err)})
+				return
+			}
+
+			sql = parseSqlOld(audit)
+			if err != nil {
+				auditLogger.WithError(err).Errorf("## parse old audit sql error")
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("timestamp format error. %s", err)})
+				return
+			}
 		}
 
 		if _, err = a.conn.Exec(context.Background(), sql); err != nil {
@@ -307,7 +327,7 @@ func (a *Audit) createDatabase() error {
 	return err
 }
 
-var noConnectionError = errors.New("no connection")
+var errNoConnection = errors.New("no connection")
 
 func (a *Audit) createDBSql() string {
 	var buf bytes.Buffer
@@ -333,7 +353,7 @@ func (a *Audit) createSTables() error {
 		"tags (cluster_id varchar(64))"
 
 	if a.conn == nil {
-		return noConnectionError
+		return errNoConnection
 	}
 	_, err := a.conn.Exec(context.Background(), createTableSql)
 	if err != nil {

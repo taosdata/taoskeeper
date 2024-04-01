@@ -465,7 +465,7 @@ func (gm *GeneralMetric) createSTables() error {
 		"tags (cluster_id varchar(50))"
 
 	if gm.conn == nil {
-		return noConnectionError
+		return errNoConnection
 	}
 	_, err := gm.conn.Exec(context.Background(), createTableSql)
 	return err
