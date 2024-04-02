@@ -85,4 +85,6 @@ func TestAdapter2(t *testing.T) {
 	assert.Equal(t, uint32(2), data.Data[0][13])
 	assert.Equal(t, uint32(1), data.Data[0][14])
 	assert.Equal(t, uint32(2), data.Data[0][15])
+
+	conn.Exec(context.Background(), "drop database "+c.Metrics.Database)
 }

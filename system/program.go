@@ -37,7 +37,7 @@ func Init() *http.Server {
 		node.Init(router)
 	}()
 
-	api.NewAdapterImporter(conf)
+	//api.NewAdapterImporter(conf)
 
 	checkHealth := api.NewCheckHealth(version.Version)
 	checkHealth.Init(router)
