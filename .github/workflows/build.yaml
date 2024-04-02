@@ -40,10 +40,13 @@ jobs:
           sudo make install
           which taosd
           which taosadapter
-          sudo echo "supportVnodes   256" >> /etc/taos/taos.cfg
+          
 
       - name: start taosd
-        run: nohup sudo taosd &
+        run: |
+          cp /etc/taos/taos.cfg ./
+          sudo echo "supportVnodes   256" >> taos.cfg
+          nohup sudo taosd -c taos.cfg &
 
       - name: start taosadapter
         run: nohup sudo taosadapter &
