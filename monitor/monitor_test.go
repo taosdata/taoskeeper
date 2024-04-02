@@ -9,6 +9,7 @@ import (
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
+	"os"
 	"testing"
 	"time"
 )
@@ -20,7 +21,10 @@ func TestStart(t *testing.T) {
 	}
 	conf.Debug = true
 	conf.Env.InCGroup = true
-
+	cpuCgroupDir := "/sys/fs/cgroup/cpu"
+	if _, err := os.Stat(cpuCgroupDir); os.IsNotExist(err) {
+		conf.Env.InCGroup = false
+	}
 	log.ConfigLog()
 	router := web.CreateRouter(conf.Debug, &conf.Cors, false)
 	conf.Metrics.Database = "monitor"
