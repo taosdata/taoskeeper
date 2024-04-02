@@ -94,6 +94,21 @@ func TestAudit(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			body := strings.NewReader(c.data)
+			req, _ := http.NewRequest(http.MethodPost, "/audit_v2", body)
+			router.ServeHTTP(w, req)
+			assert.Equal(t, 200, w.Code)
+
+			data, err := conn.Query(context.Background(), fmt.Sprintf("select ts, details from %s.operations where ts=%d", cfg.Audit.Database.Name, c.ts))
+			assert.NoError(t, err)
+			assert.Equal(t, 1, len(data.Data))
+			assert.Equal(t, c.expect, data.Data[0][1])
+		})
+	}
+
+	for _, c := range cases2 {
+		t.Run(c.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			body := strings.NewReader(c.data)
 			req, _ := http.NewRequest(http.MethodPost, "/audit", body)
 			router.ServeHTTP(w, req)
 			assert.Equal(t, 200, w.Code)
@@ -123,6 +138,10 @@ func TestAudit(t *testing.T) {
 	MAX_SQL_LEN = 300
 	// test audit batch
 	input := `{"records":[{"timestamp":"1702548856940013848","cluster_id":"8468922059162439502","user":"root","operation":"createTable","client_add":"173.50.0.7:45166","db":"test","resource":"","details":"d630302"},{"timestamp":"1702548856939746458","cluster_id":"8468922059162439502","user":"root","operation":"createTable","client_add":"173.50.0.7:45230","db":"test","resource":"","details":"d130277"},{"timestamp":"1702548856939586665","cluster_id":"8468922059162439502","user":"root","operation":"createTable","client_add":"173.50.0.7:50288","db":"test","resource":"","details":"d5268"},{"timestamp":"1702548856939528940","cluster_id":"8468922059162439502","user":"root","operation":"createTable","client_add":"173.50.0.7:50222","db":"test","resource":"","details":"d255282"},{"timestamp":"1702548856939336371","cluster_id":"8468922059162439502","user":"root","operation":"createTable","client_add":"173.50.0.7:45126","db":"test","resource":"","details":"d755297"},{"timestamp":"1702548856939075131","cluster_id":"8468922059162439502","user":"root","operation":"createTable","client_add":"173.50.0.7:45122","db":"test","resource":"","details":"d380325"},{"timestamp":"1702548856938640661","cluster_id":"8468922059162439502","user":"root","operation":"createTable","client_add":"173.50.0.7:45152","db":"test","resource":"","details":"d255281"},{"timestamp":"1702548856938505795","cluster_id":"8468922059162439502","user":"root","operation":"createTable","client_add":"173.50.0.7:45122","db":"test","resource":"","details":"d130276"},{"timestamp":"1702548856938363319","cluster_id":"8468922059162439502","user":"root","operation":"createTable","client_add":"173.50.0.7:45178","db":"test","resource":"","details":"d755296"},{"timestamp":"1702548856938201478","cluster_id":"8468922059162439502","user":"root","operation":"createTable","client_add":"173.50.0.7:45166","db":"test","resource":"","details":"d380324"},{"timestamp":"1702548856937740618","cluster_id":"8468922059162439502","user":"root","operation":"createTable","client_add":"173.50.0.7:50288","db":"test","resource":"","details":"d5266"}]}`
+
+	defer func() {
+		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", cfg.Audit.Database.Name))
+	}()
 
 	t.Run("testbatch", func(t *testing.T) {
 
