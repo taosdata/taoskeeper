@@ -10,31 +10,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/taosdata/taoskeeper/db"
-	"github.com/taosdata/taoskeeper/infrastructure/config"
+	"github.com/taosdata/taoskeeper/util"
 )
 
-func getCfg() *config.Config {
-	c := &config.Config{
-		Port: 6043,
-		TDengine: config.TDengineRestful{
-			Host:     "127.0.0.1",
-			Port:     6041,
-			Username: "root",
-			Password: "taosdata",
-		},
-		Metrics: config.MetricsConfig{
-			Database: "keeper_test_log",
-		},
-		Audit: config.AuditConfig{
-			Database: config.Database{
-				Name: "keepter_test_audit",
-			},
-		},
-	}
-	return c
-}
 func TestAudit(t *testing.T) {
-	cfg := getCfg()
+	cfg := util.GetCfg()
 
 	a, err := NewAudit(cfg)
 	assert.NoError(t, err)

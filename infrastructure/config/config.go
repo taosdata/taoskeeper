@@ -30,6 +30,7 @@ type Config struct {
 	Log              Log             `toml:"log"`
 
 	Transfer string
+	FromTime string
 	Drop     string
 }
 
@@ -60,6 +61,7 @@ func InitConfig() *Config {
 	}
 
 	transfer := pflag.StringP("transfer", "", "", "run taoskeeper in command mode, only support old_taosd_metric. transfer old metrics data to new tables and exit")
+	fromTime := pflag.StringP("fromTime", "", "2020-01-01T00:00:00+08:00", "parameter of transfer, example: 2020-01-01T00:00:00+08:00")
 	drop := pflag.StringP("drop", "", "", "run taoskeeper in command mode, only support old_taosd_metric_stables. ")
 
 	v := pflag.BoolP("version", "V", false, "Print the version and exit")
@@ -119,6 +121,7 @@ ReadConfig:
 	}
 
 	conf.Transfer = *transfer
+	conf.FromTime = *fromTime
 	conf.Drop = *drop
 
 	conf.Cors.Init()

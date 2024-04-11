@@ -18,6 +18,7 @@ import (
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
+	"github.com/taosdata/taoskeeper/util"
 )
 
 var gmLogger = log.GetLogger("gen_metric")
@@ -290,15 +291,6 @@ func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
 	}
 }
 
-func escapeInfluxProtocol(s string) string {
-	s = strings.TrimSuffix(s, "\\")
-	s = strings.ReplaceAll(s, ",", "\\,")
-	s = strings.ReplaceAll(s, "=", "\\=")
-	s = strings.ReplaceAll(s, " ", "\\ ")
-	s = strings.ReplaceAll(s, "\"", "\\\"")
-	return s
-}
-
 func writeTags(tags []Tag, stbName string, buf *bytes.Buffer) {
 	var nameArray []string
 	if columnSeq, ok := Load(stbName); ok {
@@ -323,7 +315,7 @@ func writeTags(tags []Tag, stbName string, buf *bytes.Buffer) {
 	for _, name := range nameArray {
 		if value, ok := tagMap[name]; ok {
 			if value != "" {
-				buf.WriteString(fmt.Sprintf(",%s=%s", name, escapeInfluxProtocol(value)))
+				buf.WriteString(fmt.Sprintf(",%s=%s", name, util.EscapeInfluxProtocol(value)))
 			} else {
 				buf.WriteString(fmt.Sprintf(",%s=%s", name, "unknown"))
 				gmLogger.Errorf("## tag value is empty, tag name: %s", name)

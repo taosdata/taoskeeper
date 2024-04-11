@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/taosdata/go-utils/web"
 	"github.com/taosdata/taoskeeper/api"
-	"github.com/taosdata/taoskeeper/cmd/command"
+	"github.com/taosdata/taoskeeper/cmd"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
 	"github.com/taosdata/taoskeeper/monitor"
@@ -26,7 +27,9 @@ func Init() *http.Server {
 	log.ConfigLog()
 
 	if len(conf.Transfer) > 0 || len(conf.Drop) > 0 {
-		command.Process(conf)
+		cmd := cmd.NewCommand(conf)
+		cmd.Process(conf)
+		os.Exit(0)
 		return nil
 	}
 

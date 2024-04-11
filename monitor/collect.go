@@ -7,6 +7,7 @@ import (
 
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/process"
+	"github.com/taosdata/taoskeeper/util"
 )
 
 type SysCollector interface {
@@ -59,16 +60,16 @@ func NewCGroupCollector() (*CGroupCollector, error) {
 	if err != nil {
 		return nil, err
 	}
-	cpuPeriod, err := readUint(CGroupCpuPeriodPath)
+	cpuPeriod, err := util.ReadUint(CGroupCpuPeriodPath)
 	if err != nil {
 		return nil, err
 	}
-	cpuQuota, err := readUint(CGroupCpuQuotaPath)
+	cpuQuota, err := util.ReadUint(CGroupCpuQuotaPath)
 	if err != nil {
 		return nil, err
 	}
 	cpuCore := float64(cpuQuota) / float64(cpuPeriod)
-	limitMemory, err := readUint(CGroupMemLimitPath)
+	limitMemory, err := util.ReadUint(CGroupMemLimitPath)
 	if err != nil {
 		return nil, err
 	}
