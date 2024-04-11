@@ -3,15 +3,18 @@ package monitor
 import (
 	"context"
 	"fmt"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/taosdata/go-utils/web"
 	"github.com/taosdata/taoskeeper/api"
 	"github.com/taosdata/taoskeeper/db"
+	"github.com/taosdata/taoskeeper/util"
+
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
-	"os"
-	"testing"
-	"time"
 )
 
 func TestStart(t *testing.T) {
@@ -44,13 +47,13 @@ func TestStart(t *testing.T) {
 }
 
 func TestParseUint(t *testing.T) {
-	num, err := parseUint("-1", 10, 8)
+	num, err := util.ParseUint("-1", 10, 8)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, uint64(0), num)
-	num, err = parseUint("0", 10, 8)
+	num, err = util.ParseUint("0", 10, 8)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, uint64(0), num)
-	num, err = parseUint("257", 10, 8)
+	num, err = util.ParseUint("257", 10, 8)
 	assert.Equal(t, "strconv.ParseUint: parsing \"257\": value out of range", err.Error())
 	assert.Equal(t, uint64(0), num)
 }
