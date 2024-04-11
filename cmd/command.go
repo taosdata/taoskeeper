@@ -114,14 +114,12 @@ func (cmd *Command) ProcessTransfer(conf *config.Config) {
 	wg := sync.WaitGroup{}
 	wg.Add(len(funcs))
 
-	for index := range funcs {
-		err := pool.GoroutinePool.Submit(func(i int) func() {
-			return func() {
-				defer wg.Done()
-				logger.Infof("=============i== %d", i)
-				funcs[i]()
-			}
-		}(index))
+	for i := range funcs {
+		index := i
+		err := pool.GoroutinePool.Submit(func() {
+			defer wg.Done()
+			funcs[index]()
+		})
 
 		if err != nil {
 			panic(err)
