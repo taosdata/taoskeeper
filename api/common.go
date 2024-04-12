@@ -12,7 +12,7 @@ import (
 
 var commonLogger = log.GetLogger("common")
 
-func createDatabase(username string, password string, host string, port int, dbname string, databaseOptions map[string]interface{}) {
+func CreateDatabase(username string, password string, host string, port int, dbname string, databaseOptions map[string]interface{}) {
 	ctx := context.Background()
 
 	conn, err := db.NewConnector(username, password, host, port)
@@ -56,7 +56,7 @@ func generateCreateDBSql(dbname string, databaseOptions map[string]interface{}) 
 	return buf.String()
 }
 
-func creatTables(username string, password string, host string, port int, dbname string, createList []string) {
+func CreatTables(username string, password string, host string, port int, dbname string, createList []string) {
 	ctx := context.Background()
 	conn, err := db.NewConnectorWithDb(username, password, host, port, dbname)
 	if err != nil {

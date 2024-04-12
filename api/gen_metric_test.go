@@ -10,12 +10,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/taosdata/taoskeeper/db"
+	"github.com/taosdata/taoskeeper/util"
 )
 
 func TestClusterBasic(t *testing.T) {
-	cfg := getCfg()
+	cfg := util.GetCfg()
 
-	createDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.Metrics.Database, cfg.Metrics.DatabaseOptions)
+	CreateDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.Metrics.Database, cfg.Metrics.DatabaseOptions)
 
 	gm := NewGeneralMetric(cfg)
 	err := gm.Init(router)
@@ -57,9 +58,9 @@ func TestClusterBasic(t *testing.T) {
 }
 
 func TestGenMetric(t *testing.T) {
-	cfg := getCfg()
+	cfg := util.GetCfg()
 
-	createDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.Metrics.Database, cfg.Metrics.DatabaseOptions)
+	CreateDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.Metrics.Database, cfg.Metrics.DatabaseOptions)
 
 	gm := NewGeneralMetric(cfg)
 	// err := gm.Init(router)

@@ -28,6 +28,10 @@ type Config struct {
 	Env              Environment     `toml:"environment"`
 	Audit            AuditConfig     `toml:"audit"`
 	Log              Log             `toml:"log"`
+
+	Transfer string
+	FromTime string
+	Drop     string
 }
 
 type TDengineRestful struct {
@@ -56,12 +60,18 @@ func InitConfig() *Config {
 		cp = pflag.StringP("config", "c", "", fmt.Sprintf("config path default /etc/%s/%s.toml", version.CUS_PROMPT, Name))
 	}
 
+	transfer := pflag.StringP("transfer", "", "", "run taoskeeper in command mode, only support old_taosd_metric. transfer old metrics data to new tables and exit")
+	fromTime := pflag.StringP("fromTime", "", "2020-01-01T00:00:00+08:00", "parameter of transfer, example: 2020-01-01T00:00:00+08:00")
+	drop := pflag.StringP("drop", "", "", "run taoskeeper in command mode, only support old_taosd_metric_stables. ")
+
 	v := pflag.BoolP("version", "V", false, "Print the version and exit")
 	help := pflag.BoolP("help", "h", false, "Print this help message and exit")
+
 	pflag.Parse()
 
 	if *help {
 		fmt.Fprintf(os.Stderr, "Usage of taosKeeper v%s:\n", version.Version)
+		pflag.CommandLine.SortFlags = false
 		pflag.PrintDefaults()
 		os.Exit(0)
 	}
@@ -110,6 +120,10 @@ ReadConfig:
 		fmt.Println("config file:", string(j))
 	}
 
+	conf.Transfer = *transfer
+	conf.FromTime = *fromTime
+	conf.Drop = *drop
+
 	conf.Cors.Init()
 	pool.Init(conf.GoPoolSize)
 	conf.Log.SetValue()
@@ -153,10 +167,6 @@ func init() {
 	viper.SetDefault("tdengine.password", "taosdata")
 	_ = viper.BindEnv("tdengine.password", "TAOS_KEEPER_TDENGINE_PASSWORD")
 	pflag.String("tdengine.password", "taosdata", `TDengine server's password. Env "TAOS_KEEPER_TDENGINE_PASSWORD"`)
-
-	viper.SetDefault("taosAdapter.address", "")
-	_ = viper.BindEnv("taosAdapter.address", "TAOS_KEEPER_TAOSADAPTER_ADDRESS")
-	pflag.String("taosAdapter.address", "", `list of taosAdapter that need to be monitored, multiple values split with white space. Env "TAOS_KEEPER_TAOSADAPTER_ADDRESS"`)
 
 	viper.SetDefault("metrics.prefix", "")
 	_ = viper.BindEnv("metrics.prefix", "TAOS_KEEPER_METRICS_PREFIX")

@@ -8,12 +8,15 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
+	"github.com/taosdata/taoskeeper/cmd"
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
+	"github.com/taosdata/taoskeeper/infrastructure/log"
 	"github.com/taosdata/taoskeeper/process"
 )
 
@@ -23,6 +26,8 @@ var dbName = "exporter_test"
 
 func TestMain(m *testing.M) {
 	conf = config.InitConfig()
+	log.ConfigLog()
+
 	conf.Metrics.Database = dbName
 	conn, err := db.NewConnector(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port)
 	if err != nil {
@@ -30,6 +35,8 @@ func TestMain(m *testing.M) {
 	}
 	defer conn.Close()
 	ctx := context.Background()
+	conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", conf.Metrics.Database))
+
 	if _, err = conn.Exec(ctx, fmt.Sprintf("create database if not exists %s", dbName)); err != nil {
 		logger.Errorf("execute sql: %s, error: %s", fmt.Sprintf("create database %s", dbName), err)
 	}
@@ -52,7 +59,7 @@ func TestMain(m *testing.M) {
 		CreateGrantInfoSql,
 		CreateKeeperSql,
 	}
-	creatTables(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.Metrics.Database, createList)
+	CreatTables(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.Metrics.Database, createList)
 
 	processor := process.NewProcessor(conf)
 	node := NewNodeExporter(processor)
@@ -70,8 +77,11 @@ func TestGetMetrics(t *testing.T) {
 	assert.Equal(t, 200, w.Code)
 }
 
+var now = time.Now()
+var nowStr = now.Format(time.RFC3339Nano)
+
 var report = Report{
-	Ts:        "2022-03-03T20:23:00.929+0800",
+	Ts:        nowStr,
 	DnodeID:   1,
 	DnodeEp:   "localhost:7100",
 	ClusterID: "6980428120398645172",
@@ -220,6 +230,11 @@ func TestPutMetrics(t *testing.T) {
 		logger.WithError(err).Errorf("connect to database error")
 		return
 	}
+
+	defer func() {
+		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", conf.Metrics.Database))
+	}()
+
 	ctx := context.Background()
 	data, err := conn.Query(ctx, "select info from log_summary")
 	if err != nil {
@@ -229,4 +244,53 @@ func TestPutMetrics(t *testing.T) {
 	for _, info := range data.Data {
 		assert.Equal(t, int32(114), info[0])
 	}
+
+	var tenMinutesBefore = now.Add(-10 * time.Minute)
+	var tenMinutesBeforeStr = tenMinutesBefore.Format(time.RFC3339Nano)
+
+	conf.FromTime = tenMinutesBeforeStr
+	conf.Transfer = "old_taosd_metric"
+
+	var cmd = cmd.NewCommand(conf)
+	cmd.Process(conf)
+
+	type TableInfo struct {
+		TsName string
+		RowNum int
+	}
+
+	tables := map[string]*TableInfo{
+		"taosd_cluster_basic":    {"ts", 1},
+		"taosd_cluster_info":     {"_ts", 1},
+		"taosd_vgroups_info":     {"_ts", 1},
+		"taosd_dnodes_info":      {"_ts", 1},
+		"taosd_dnodes_status":    {"_ts", 1},
+		"taosd_dnodes_data_dirs": {"_ts", 1},
+		"taosd_dnodes_log_dirs":  {"_ts", 2},
+		"taosd_mnodes_info":      {"_ts", 1},
+		"taosd_vnodes_info":      {"_ts", 1},
+	}
+
+	for table, tableInfo := range tables {
+		data, err = conn.Query(ctx, fmt.Sprintf("select %s from %s", tableInfo.TsName, table))
+		if err != nil {
+			logger.Errorf("execute sql: %s, error: %s", "select * from "+table, err)
+			t.Fatal(err)
+		}
+
+		assert.Equal(t, tableInfo.RowNum, len(data.Data))
+		assert.Equal(t, now.UnixMilli(), data.Data[0][0].(time.Time).UnixMilli())
+	}
+
+	conf.Transfer = ""
+	conf.Drop = "old_taosd_metric_stables"
+	cmd.Process(conf)
+
+	data, err = conn.Query(ctx, "select * from  information_schema.ins_stables where stable_name = 'm_info'")
+	if err != nil {
+		logger.Errorf("execute sql: %s, error: %s", "m_info is not droped", err)
+		t.Fatal(err)
+	}
+	assert.Equal(t, 0, len(data.Data))
+	logger.Infof("ALL  OK  !!!")
 }

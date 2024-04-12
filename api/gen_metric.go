@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
+	"github.com/taosdata/taoskeeper/util"
 )
 
 var gmLogger = log.GetLogger("gen_metric")
@@ -215,12 +217,12 @@ func (gm *GeneralMetric) handleBatchMetrics(request []StableArrayInfo) error {
 		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
 			gmLogger.Tracef("## buf: %v", buf.String())
 		}
-		return gm.lineWriteBody(buf)
+		return gm.lineWriteBody(&buf)
 	}
 	return nil
 }
 
-func (gm *GeneralMetric) lineWriteBody(buf bytes.Buffer) error {
+func (gm *GeneralMetric) lineWriteBody(buf *bytes.Buffer) error {
 	header := map[string][]string{
 		"Connection": {"keep-alive"},
 	}
@@ -235,7 +237,7 @@ func (gm *GeneralMetric) lineWriteBody(buf bytes.Buffer) error {
 	}
 	req.SetBasicAuth(gm.username, gm.password)
 
-	req.Body = io.NopCloser(&buf)
+	req.Body = io.NopCloser(buf)
 	resp, err := gm.client.Do(req)
 
 	if err != nil {
@@ -290,15 +292,6 @@ func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
 	}
 }
 
-func escapeInfluxProtocol(s string) string {
-	s = strings.TrimSuffix(s, "\\")
-	s = strings.ReplaceAll(s, ",", "\\,")
-	s = strings.ReplaceAll(s, "=", "\\=")
-	s = strings.ReplaceAll(s, " ", "\\ ")
-	s = strings.ReplaceAll(s, "\"", "\\\"")
-	return s
-}
-
 func writeTags(tags []Tag, stbName string, buf *bytes.Buffer) {
 	var nameArray []string
 	if columnSeq, ok := Load(stbName); ok {
@@ -323,7 +316,7 @@ func writeTags(tags []Tag, stbName string, buf *bytes.Buffer) {
 	for _, name := range nameArray {
 		if value, ok := tagMap[name]; ok {
 			if value != "" {
-				buf.WriteString(fmt.Sprintf(",%s=%s", name, escapeInfluxProtocol(value)))
+				buf.WriteString(fmt.Sprintf(",%s=%s", name, util.EscapeInfluxProtocol(value)))
 			} else {
 				buf.WriteString(fmt.Sprintf(",%s=%s", name, "unknown"))
 				gmLogger.Errorf("## tag value is empty, tag name: %s", name)
@@ -366,7 +359,7 @@ func writeMetrics(metrics []Metric, stbName string, buf *bytes.Buffer) {
 
 	for i, name := range nameArray {
 		if value, ok := metricMap[name]; ok {
-			buf.WriteString(fmt.Sprintf("%s=%ff64", name, value))
+			buf.WriteString(fmt.Sprintf("%s=%s64", name, strconv.FormatFloat(value, 'f', -1, 64)))
 			if i != len(nameArray)-1 {
 				buf.WriteString(",")
 			}
