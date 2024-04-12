@@ -208,17 +208,18 @@ func (cmd *Command) ProcessDrop(conf *config.Config) {
 	for _, stable := range dropStableList {
 		if _, err := cmd.conn.Exec(ctx, "DROP STABLE IF EXISTS "+stable); err != nil {
 			logger.Errorf("drop stable %s, error: %s", stable, err)
+			panic(err)
 		}
 	}
 	logger.Info("## drop old taosd metric stables success!!")
 }
 
-func (cmd *Command) TransferDataToDest(data *db.Data, dstTable string, tagNum int) error {
+func (cmd *Command) TransferDataToDest(data *db.Data, dstTable string, tagNum int) {
 
 	var buf bytes.Buffer
 
 	if len(data.Data) < 1 {
-		return nil
+		return
 	}
 
 	for _, row := range data.Data {
@@ -255,15 +256,15 @@ func (cmd *Command) TransferDataToDest(data *db.Data, dstTable string, tagNum in
 
 			switch v := row[j].(type) {
 			case int:
-				buf.WriteString(fmt.Sprintf("%s=%ff64", data.Head[j], float64(v)))
+				buf.WriteString(fmt.Sprintf("%s=%gf64", data.Head[j], float64(v)))
 			case int32:
-				buf.WriteString(fmt.Sprintf("%s=%ff64", data.Head[j], float64(v)))
+				buf.WriteString(fmt.Sprintf("%s=%gf64", data.Head[j], float64(v)))
 			case int64:
-				buf.WriteString(fmt.Sprintf("%s=%ff64", data.Head[j], float64(v)))
+				buf.WriteString(fmt.Sprintf("%s=%gf64", data.Head[j], float64(v)))
 			case float32:
-				buf.WriteString(fmt.Sprintf("%s=%ff64", data.Head[j], float64(v)))
+				buf.WriteString(fmt.Sprintf("%s=%gf64", data.Head[j], float64(v)))
 			case float64:
-				buf.WriteString(fmt.Sprintf("%s=%ff64", data.Head[j], v))
+				buf.WriteString(fmt.Sprintf("%s=%gf64", data.Head[j], v))
 			default:
 				panic(fmt.Sprintf("Unexpected type for row[%d]: %T", j, row[j]))
 			}
@@ -282,7 +283,11 @@ func (cmd *Command) TransferDataToDest(data *db.Data, dstTable string, tagNum in
 			if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
 				logger.Tracef("## buf: %v", buf.String())
 			}
-			cmd.lineWriteBody(buf)
+			err := cmd.lineWriteBody(buf)
+			if err != nil {
+				logger.Error("## insert data error", "error", err)
+				panic(err)
+			}
 			buf.Reset()
 		}
 	}
@@ -291,9 +296,12 @@ func (cmd *Command) TransferDataToDest(data *db.Data, dstTable string, tagNum in
 		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
 			logger.Tracef("## buf: %v", buf.String())
 		}
-		cmd.lineWriteBody(buf)
+		err := cmd.lineWriteBody(buf)
+		if err != nil {
+			logger.Error("## insert data error", "error", err)
+			panic(err)
+		}
 	}
-	return nil
 }
 
 // cluster_info
