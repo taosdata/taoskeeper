@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -216,12 +217,12 @@ func (gm *GeneralMetric) handleBatchMetrics(request []StableArrayInfo) error {
 		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
 			gmLogger.Tracef("## buf: %v", buf.String())
 		}
-		return gm.lineWriteBody(buf)
+		return gm.lineWriteBody(&buf)
 	}
 	return nil
 }
 
-func (gm *GeneralMetric) lineWriteBody(buf bytes.Buffer) error {
+func (gm *GeneralMetric) lineWriteBody(buf *bytes.Buffer) error {
 	header := map[string][]string{
 		"Connection": {"keep-alive"},
 	}
@@ -236,7 +237,7 @@ func (gm *GeneralMetric) lineWriteBody(buf bytes.Buffer) error {
 	}
 	req.SetBasicAuth(gm.username, gm.password)
 
-	req.Body = io.NopCloser(&buf)
+	req.Body = io.NopCloser(buf)
 	resp, err := gm.client.Do(req)
 
 	if err != nil {
@@ -358,7 +359,7 @@ func writeMetrics(metrics []Metric, stbName string, buf *bytes.Buffer) {
 
 	for i, name := range nameArray {
 		if value, ok := metricMap[name]; ok {
-			buf.WriteString(fmt.Sprintf("%s=%gf64", name, value))
+			buf.WriteString(fmt.Sprintf("%s=%s64", name, strconv.FormatFloat(value, 'f', -1, 64)))
 			if i != len(nameArray)-1 {
 				buf.WriteString(",")
 			}

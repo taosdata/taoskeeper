@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"sync"
-	"time"
-
 	"io"
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
+	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/taosdata/taoskeeper/db"
@@ -70,6 +70,11 @@ func NewCommand(conf *config.Config) *Command {
 }
 
 func (cmd *Command) Process(conf *config.Config) {
+	if len(conf.Transfer) > 0 && len(conf.Drop) > 0 {
+		logger.Errorf("transfer and drop can't be set at the same time")
+		return
+	}
+
 	if len(conf.Transfer) > 0 && conf.Transfer != "old_taosd_metric" {
 		logger.Errorf("transfer only support old_taosd_metric")
 		return
@@ -256,15 +261,15 @@ func (cmd *Command) TransferDataToDest(data *db.Data, dstTable string, tagNum in
 
 			switch v := row[j].(type) {
 			case int:
-				buf.WriteString(fmt.Sprintf("%s=%gf64", data.Head[j], float64(v)))
+				buf.WriteString(fmt.Sprintf("%s=%ff64", data.Head[j], float64(v)))
 			case int32:
-				buf.WriteString(fmt.Sprintf("%s=%gf64", data.Head[j], float64(v)))
+				buf.WriteString(fmt.Sprintf("%s=%ff64", data.Head[j], float64(v)))
 			case int64:
-				buf.WriteString(fmt.Sprintf("%s=%gf64", data.Head[j], float64(v)))
+				buf.WriteString(fmt.Sprintf("%s=%ff64", data.Head[j], float64(v)))
 			case float32:
-				buf.WriteString(fmt.Sprintf("%s=%gf64", data.Head[j], float64(v)))
+				buf.WriteString(fmt.Sprintf("%s=%sf64", data.Head[j], strconv.FormatFloat(float64(v), 'f', -1, 64)))
 			case float64:
-				buf.WriteString(fmt.Sprintf("%s=%gf64", data.Head[j], v))
+				buf.WriteString(fmt.Sprintf("%s=%sf64", data.Head[j], strconv.FormatFloat(v, 'f', -1, 64)))
 			default:
 				panic(fmt.Sprintf("Unexpected type for row[%d]: %T", j, row[j]))
 			}
@@ -283,7 +288,7 @@ func (cmd *Command) TransferDataToDest(data *db.Data, dstTable string, tagNum in
 			if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
 				logger.Tracef("## buf: %v", buf.String())
 			}
-			err := cmd.lineWriteBody(buf)
+			err := cmd.lineWriteBody(&buf)
 			if err != nil {
 				logger.Error("## insert data error", "error", err)
 				panic(err)
@@ -296,7 +301,7 @@ func (cmd *Command) TransferDataToDest(data *db.Data, dstTable string, tagNum in
 		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
 			logger.Tracef("## buf: %v", buf.String())
 		}
-		err := cmd.lineWriteBody(buf)
+		err := cmd.lineWriteBody(&buf)
 		if err != nil {
 			logger.Error("## insert data error", "error", err)
 			panic(err)
@@ -419,7 +424,7 @@ func (cmd *Command) TransferTableToDst(sql string, dstTable string, tagNum int) 
 	return nil
 }
 
-func (cmd *Command) lineWriteBody(buf bytes.Buffer) error {
+func (cmd *Command) lineWriteBody(buf *bytes.Buffer) error {
 	header := map[string][]string{
 		"Connection": {"keep-alive"},
 	}
@@ -435,7 +440,7 @@ func (cmd *Command) lineWriteBody(buf bytes.Buffer) error {
 	}
 	req.SetBasicAuth(cmd.username, cmd.password)
 
-	req.Body = io.NopCloser(&buf)
+	req.Body = io.NopCloser(buf)
 	resp, err := cmd.client.Do(req)
 
 	if err != nil {
