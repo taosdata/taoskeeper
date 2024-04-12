@@ -570,8 +570,8 @@ func (p *Processor) buildFQName(tableName string, column string) string {
 	return fqName
 }
 
-func (p *Processor) GetMetric() map[string]*Table {
-	return p.tableMap
+func (p *Processor) GetMetric() map[string]*Metric {
+	return p.metricMap
 }
 
 func (p *Processor) Close() error {
