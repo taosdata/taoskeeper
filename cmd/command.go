@@ -170,7 +170,7 @@ func (cmd *Command) TransferTaosdDnodesLogDirs2() error {
 }
 
 func (cmd *Command) TransferTaosdDnodesDataDirs() error {
-	sql := "select cluster_id, dnode_id, dnode_ep, name as data_dir_name, level as data_dir_level, avail, used, total, ts from data_dir a where "
+	sql := "select cluster_id, dnode_id, dnode_ep, name as data_dir_name, `level` as data_dir_level, avail, used, total, ts from data_dir a where "
 	dstTable := "taosd_dnodes_data_dirs"
 	return cmd.TransferTableToDst(sql, dstTable, 4)
 }
