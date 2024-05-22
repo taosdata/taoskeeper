@@ -376,8 +376,8 @@ github.com/stretchr/testify v1.8.3/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXl
 github.com/subosito/gotenv v1.3.0 h1:mjC+YW8QpAdXibNi+vNWgzmgBH4+5l5dCXv8cNysBLI=
 github.com/subosito/gotenv v1.3.0/go.mod h1:YzJjq/33h7nrwdY+iHMhEOEEbW0ovIz0tB6t6PwAXzs=
 github.com/taosdata/driver-go/v2 v2.0.1-0.20211018081904-0a2a3ef6c829/go.mod h1:W7pu74rSvDmGjJPO6fzp+GCtwOelrMgXEhPD0aQJ1xw=
-github.com/taosdata/driver-go/v3 v3.1.0 h1:QhGxmXnHU6tLGuamXdwz2NCX2WbmQ1SBflYreH1TCZ8=
-github.com/taosdata/driver-go/v3 v3.1.0/go.mod h1:H2vo/At+rOPY1aMzUV9P49SVX7NlXb3LAbKw+MCLrmU=
+github.com/taosdata/driver-go/v3 v3.5.5 h1:VN/I8grQxohETVhtQkP5u/Sd2Wjx4q+YxYdMhCKziKA=
+github.com/taosdata/driver-go/v3 v3.5.5/go.mod h1:H2vo/At+rOPY1aMzUV9P49SVX7NlXb3LAbKw+MCLrmU=
 github.com/taosdata/go-utils v0.0.0-20211022070036-018cc5f2432a h1:WGFREiuYBrTXTS9GVQQpDvVgGRyByfo0V5//o7tv/ho=
 github.com/taosdata/go-utils v0.0.0-20211022070036-018cc5f2432a/go.mod h1:hlvGgM/HN3AqWMajvMQe80qoLNJ4KIxs8YOVqEqnxUo=
 github.com/tebeka/strftime v0.1.3 h1:5HQXOqWKYRFfNyBMNVc9z5+QzuBtIXy03psIhtdJYto=

@@ -28,6 +28,7 @@ type Audit struct {
 	password  string
 	host      string
 	port      int
+	usessl    bool
 	conn      *db.Connector
 	db        string
 	dbOptions map[string]interface{}
@@ -65,6 +66,7 @@ func NewAudit(c *config.Config) (*Audit, error) {
 		password:  c.TDengine.Password,
 		host:      c.TDengine.Host,
 		port:      c.TDengine.Port,
+		usessl:    c.TDengine.Usessl,
 		db:        c.Audit.Database.Name,
 		dbOptions: c.Audit.Database.Options,
 	}
@@ -301,7 +303,7 @@ func getTableNameOld(audit AuditInfoOld) string {
 }
 
 func (a *Audit) initConnect() error {
-	conn, err := db.NewConnectorWithDb(a.username, a.password, a.host, a.port, a.db)
+	conn, err := db.NewConnectorWithDb(a.username, a.password, a.host, a.port, a.db, a.usessl)
 	if err != nil {
 		auditLogger.Error("## init db connect error", "error", err)
 		return err
@@ -311,7 +313,7 @@ func (a *Audit) initConnect() error {
 }
 
 func (a *Audit) createDatabase() error {
-	conn, err := db.NewConnector(a.username, a.password, a.host, a.port)
+	conn, err := db.NewConnector(a.username, a.password, a.host, a.port, a.usessl)
 	if err != nil {
 		return fmt.Errorf("connect to database error: %s", err)
 	}

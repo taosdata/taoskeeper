@@ -12,10 +12,10 @@ import (
 
 var commonLogger = log.GetLogger("common")
 
-func CreateDatabase(username string, password string, host string, port int, dbname string, databaseOptions map[string]interface{}) {
+func CreateDatabase(username string, password string, host string, port int, usessl bool, dbname string, databaseOptions map[string]interface{}) {
 	ctx := context.Background()
 
-	conn, err := db.NewConnector(username, password, host, port)
+	conn, err := db.NewConnector(username, password, host, port, usessl)
 	if err != nil {
 		commonLogger.WithError(err).Errorf("connect to adapter error")
 		return
@@ -56,9 +56,9 @@ func generateCreateDBSql(dbname string, databaseOptions map[string]interface{}) 
 	return buf.String()
 }
 
-func CreatTables(username string, password string, host string, port int, dbname string, createList []string) {
+func CreatTables(username string, password string, host string, port int, usessl bool, dbname string, createList []string) {
 	ctx := context.Background()
-	conn, err := db.NewConnectorWithDb(username, password, host, port, dbname)
+	conn, err := db.NewConnectorWithDb(username, password, host, port, dbname, usessl)
 	if err != nil {
 		commonLogger.WithError(err).Errorf("connect to database error")
 		return

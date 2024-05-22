@@ -39,6 +39,7 @@ type TDengineRestful struct {
 	Port     int    `toml:"port"`
 	Username string `toml:"username"`
 	Password string `toml:"password"`
+	Usessl   bool   `toml:"usessl"`
 }
 
 var (
