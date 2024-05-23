@@ -16,7 +16,7 @@ import (
 func TestClusterBasic(t *testing.T) {
 	cfg := util.GetCfg()
 
-	CreateDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.TDengine.Usessl, conf.Metrics.Database, cfg.Metrics.DatabaseOptions)
+	CreateDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.TDengine.Usessl, cfg.Metrics.Database, cfg.Metrics.DatabaseOptions)
 
 	gm := NewGeneralMetric(cfg)
 	err := gm.Init(router)
