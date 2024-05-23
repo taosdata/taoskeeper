@@ -20,7 +20,7 @@ func TestAdapter2(t *testing.T) {
 			Port:     6041,
 			Username: "root",
 			Password: "taosdata",
-			Usessl:   true,
+			Usessl:   false,
 		},
 		Metrics: config.MetricsConfig{
 			Database: "adapter_report_test",

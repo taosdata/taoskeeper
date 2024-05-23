@@ -40,7 +40,7 @@ func TestStart(t *testing.T) {
 		SysMonitor.Deregister(k)
 	}
 
-	conn, err := db.NewConnectorWithDb(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.Metrics.Database)
+	conn, err := db.NewConnectorWithDb(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.Metrics.Database, conf.TDengine.Usessl)
 	assert.NoError(t, err)
 	conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", conf.Metrics.Database))
 
