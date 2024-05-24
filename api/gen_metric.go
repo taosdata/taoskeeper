@@ -3,11 +3,13 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+
 	"net/url"
 	"strconv"
 	"strings"
@@ -41,6 +43,7 @@ type GeneralMetric struct {
 	password string
 	host     string
 	port     int
+	usessl   bool
 	database string
 	url      *url.URL
 }
@@ -83,7 +86,7 @@ func (gm *GeneralMetric) Init(c gin.IRouter) error {
 	c.POST("/general-metric", gm.handleFunc())
 	c.POST("/taosd-cluster-basic", gm.handleTaosdClusterBasic())
 
-	conn, err := db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database)
+	conn, err := db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database, gm.usessl)
 	if err != nil {
 		gmLogger.Error("## init db connect error", "error", err)
 		return err
@@ -106,6 +109,7 @@ func (gm *GeneralMetric) Init(c gin.IRouter) error {
 }
 
 func NewGeneralMetric(conf *config.Config) *GeneralMetric {
+
 	client := &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
@@ -117,7 +121,17 @@ func NewGeneralMetric(conf *config.Config) *GeneralMetric {
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
 			DisableCompression:    true,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
 		},
+	}
+
+	var protocol string
+	if conf.TDengine.Usessl {
+		protocol = "https"
+	} else {
+		protocol = "http"
 	}
 
 	imp := &GeneralMetric{
@@ -126,9 +140,10 @@ func NewGeneralMetric(conf *config.Config) *GeneralMetric {
 		password: conf.TDengine.Password,
 		host:     conf.TDengine.Host,
 		port:     conf.TDengine.Port,
+		usessl:   conf.TDengine.Usessl,
 		database: conf.Metrics.Database,
 		url: &url.URL{
-			Scheme:   "http",
+			Scheme:   protocol,
 			Host:     fmt.Sprintf("%s:%d", conf.TDengine.Host, conf.TDengine.Port),
 			Path:     "/influxdb/v1/write",
 			RawQuery: fmt.Sprintf("db=%s&precision=ms", conf.Metrics.Database),

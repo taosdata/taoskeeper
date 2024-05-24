@@ -175,7 +175,7 @@ type DataDir struct {
 var CreateDataDirSql = "create table if not exists data_dir (" +
 	"ts timestamp, " +
 	"name nchar(200), " +
-	"level int, " +
+	"`level` int, " +
 	"avail bigint, " +
 	"used bigint, " +
 	"total bigint" +

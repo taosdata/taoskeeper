@@ -7,12 +7,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
-	"net/http"
-	"time"
 )
 
 var adapterLog = log.GetLogger("adapter")
@@ -29,6 +30,7 @@ type Adapter struct {
 	password  string
 	host      string
 	port      int
+	usessl    bool
 	conn      *db.Connector
 	db        string
 	dbOptions map[string]interface{}
@@ -40,6 +42,7 @@ func NewAdapter(c *config.Config) *Adapter {
 		password:  c.TDengine.Password,
 		host:      c.TDengine.Host,
 		port:      c.TDengine.Port,
+		usessl:    c.TDengine.Usessl,
 		db:        c.Metrics.Database,
 		dbOptions: c.Metrics.DatabaseOptions,
 	}
@@ -94,7 +97,7 @@ func (a *Adapter) handleFunc() gin.HandlerFunc {
 }
 
 func (a *Adapter) initConnect() error {
-	conn, err := db.NewConnectorWithDb(a.username, a.password, a.host, a.port, a.db)
+	conn, err := db.NewConnectorWithDb(a.username, a.password, a.host, a.port, a.db, a.usessl)
 	if err != nil {
 		adapterLog.Error("## init db connect error", "error", err)
 		return err
@@ -129,7 +132,7 @@ func (a *Adapter) tableName(endpoint string, reqType adapterReqType) string {
 }
 
 func (a *Adapter) createDatabase() error {
-	conn, err := db.NewConnector(a.username, a.password, a.host, a.port)
+	conn, err := db.NewConnector(a.username, a.password, a.host, a.port, a.usessl)
 	if err != nil {
 		return fmt.Errorf("connect to database error: %s", err)
 	}

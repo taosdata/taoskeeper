@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 	log.ConfigLog()
 
 	conf.Metrics.Database = dbName
-	conn, err := db.NewConnector(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port)
+	conn, err := db.NewConnector(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.TDengine.Usessl)
 	if err != nil {
 		panic(err)
 	}
@@ -59,7 +59,7 @@ func TestMain(m *testing.M) {
 		CreateGrantInfoSql,
 		CreateKeeperSql,
 	}
-	CreatTables(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.Metrics.Database, createList)
+	CreatTables(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.TDengine.Usessl, conf.Metrics.Database, createList)
 
 	processor := process.NewProcessor(conf)
 	node := NewNodeExporter(processor)
@@ -225,7 +225,7 @@ func TestPutMetrics(t *testing.T) {
 	router.ServeHTTP(w, req)
 	assert.Equal(t, 200, w.Code)
 	conn, err := db.NewConnectorWithDb(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host,
-		conf.TDengine.Port, dbName)
+		conf.TDengine.Port, dbName, conf.TDengine.Usessl)
 	if err != nil {
 		logger.WithError(err).Errorf("connect to database error")
 		return

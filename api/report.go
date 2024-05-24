@@ -37,6 +37,7 @@ type Reporter struct {
 	password        string
 	host            string
 	port            int
+	usessl          bool
 	dbname          string
 	databaseOptions map[string]interface{}
 	totalRep        atomic.Value
@@ -48,6 +49,7 @@ func NewReporter(conf *config.Config) *Reporter {
 		password:        conf.TDengine.Password,
 		host:            conf.TDengine.Host,
 		port:            conf.TDengine.Port,
+		usessl:          conf.TDengine.Usessl,
 		dbname:          conf.Metrics.Database,
 		databaseOptions: conf.Metrics.DatabaseOptions,
 	}
@@ -68,7 +70,7 @@ func (r *Reporter) Init(c gin.IRouter) {
 }
 
 func (r *Reporter) getConn() *db.Connector {
-	conn, err := db.NewConnector(r.username, r.password, r.host, r.port)
+	conn, err := db.NewConnector(r.username, r.password, r.host, r.port, r.usessl)
 	if err != nil {
 		logger.WithError(err).Error("connect to database error")
 		panic(err)
@@ -283,7 +285,7 @@ func (r *Reporter) generateCreateDBSql() string {
 
 func (r *Reporter) creatTables() {
 	ctx := context.Background()
-	conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname)
+	conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname, r.usessl)
 	if err != nil {
 		logger.WithError(err).Errorf("connect to database error")
 		return
@@ -333,7 +335,7 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 		}
 		sqls = append(sqls, insertLogSummary(report.LogInfos, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts))
 
-		conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname)
+		conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname, r.usessl)
 		if err != nil {
 			logger.WithError(err).Errorf("connect to database error")
 			return

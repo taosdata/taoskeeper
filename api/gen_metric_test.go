@@ -16,7 +16,7 @@ import (
 func TestClusterBasic(t *testing.T) {
 	cfg := util.GetCfg()
 
-	CreateDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.Metrics.Database, cfg.Metrics.DatabaseOptions)
+	CreateDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.TDengine.Usessl, cfg.Metrics.Database, cfg.Metrics.DatabaseOptions)
 
 	gm := NewGeneralMetric(cfg)
 	err := gm.Init(router)
@@ -36,7 +36,7 @@ func TestClusterBasic(t *testing.T) {
 		expect: "7648966395564416484",
 	}
 
-	conn, err := db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database)
+	conn, err := db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database, gm.usessl)
 	assert.NoError(t, err)
 	defer func() {
 		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database))
@@ -60,7 +60,7 @@ func TestClusterBasic(t *testing.T) {
 func TestGenMetric(t *testing.T) {
 	cfg := util.GetCfg()
 
-	CreateDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.Metrics.Database, cfg.Metrics.DatabaseOptions)
+	CreateDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.TDengine.Usessl, cfg.Metrics.Database, cfg.Metrics.DatabaseOptions)
 
 	gm := NewGeneralMetric(cfg)
 	// err := gm.Init(router)
@@ -160,7 +160,7 @@ func TestGenMetric(t *testing.T) {
 		expect: "1397715317673023180",
 	}
 
-	conn, err := db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database)
+	conn, err := db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database, gm.usessl)
 	assert.NoError(t, err)
 	defer func() {
 		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database))
