@@ -17,16 +17,28 @@ type Data struct {
 	Data [][]interface{} `json:"data"`
 }
 
-func NewConnector(username, password, host string, port int) (*Connector, error) {
-	db, err := sql.Open("taosRestful", fmt.Sprintf("%s:%s@http(%s:%d)/", username, password, host, port))
+func NewConnector(username, password, host string, port int, usessl bool) (*Connector, error) {
+	var protocol string
+	if usessl {
+		protocol = "https"
+	} else {
+		protocol = "http"
+	}
+	db, err := sql.Open("taosRestful", fmt.Sprintf("%s:%s@%s(%s:%d)/?skipVerify=true", username, password, protocol, host, port))
 	if err != nil {
 		return nil, err
 	}
 	return &Connector{db: db}, nil
 }
 
-func NewConnectorWithDb(username, password, host string, port int, dbname string) (*Connector, error) {
-	db, err := sql.Open("taosRestful", fmt.Sprintf("%s:%s@http(%s:%d)/%s", username, password, host, port, dbname))
+func NewConnectorWithDb(username, password, host string, port int, dbname string, usessl bool) (*Connector, error) {
+	var protocol string
+	if usessl {
+		protocol = "https"
+	} else {
+		protocol = "http"
+	}
+	db, err := sql.Open("taosRestful", fmt.Sprintf("%s:%s@%s(%s:%d)/%s?skipVerify=true", username, password, protocol, host, port, dbname))
 	if err != nil {
 		return nil, err
 	}

@@ -53,6 +53,7 @@ func GetCfg() *config.Config {
 			Port:     6041,
 			Username: "root",
 			Password: "taosdata",
+			Usessl:   false,
 		},
 		Metrics: config.MetricsConfig{
 			Database: "keeper_test_log",

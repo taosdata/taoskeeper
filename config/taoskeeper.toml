@@ -18,6 +18,7 @@ host = "127.0.0.1"
 port = 6041
 username = "root"
 password = "taosdata"
+usessl = false
 
 [metrics]
 # metrics prefix in metrics names.

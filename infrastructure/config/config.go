@@ -39,6 +39,7 @@ type TDengineRestful struct {
 	Port     int    `toml:"port"`
 	Username string `toml:"username"`
 	Password string `toml:"password"`
+	Usessl   bool   `toml:"usessl"`
 }
 
 var (
@@ -77,9 +78,9 @@ func InitConfig() *Config {
 	}
 
 	if *v {
-		fmt.Printf("version: %s\n", version.Version)
-		fmt.Printf("gitinfo: %s\n", version.Gitinfo)
-		fmt.Printf("buildInfo: %s\n", version.BuildInfo)
+		fmt.Printf("taoskeeper version: %s\n", version.Version)
+		fmt.Printf("git: %s\n", version.Gitinfo)
+		fmt.Printf("build: %s\n", version.BuildInfo)
 		os.Exit(0)
 	}
 
@@ -167,6 +168,10 @@ func init() {
 	viper.SetDefault("tdengine.password", "taosdata")
 	_ = viper.BindEnv("tdengine.password", "TAOS_KEEPER_TDENGINE_PASSWORD")
 	pflag.String("tdengine.password", "taosdata", `TDengine server's password. Env "TAOS_KEEPER_TDENGINE_PASSWORD"`)
+
+	viper.SetDefault("tdengine.usessl", false)
+	_ = viper.BindEnv("tdengine.usessl", "TAOS_KEEPER_TDENGINE_USESSL")
+	pflag.Bool("tdengine.usessl", false, `TDengine server use ssl or not. Env "TAOS_KEEPER_TDENGINE_USESSL"`)
 
 	viper.SetDefault("metrics.prefix", "")
 	_ = viper.BindEnv("metrics.prefix", "TAOS_KEEPER_METRICS_PREFIX")
