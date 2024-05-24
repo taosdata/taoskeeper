@@ -78,7 +78,7 @@ func InitConfig() *Config {
 	}
 
 	if *v {
-		fmt.Printf("version: %s\n", version.Version)
+		fmt.Printf("taoskeeper version: %s\n", version.Version)
 		fmt.Printf("gitinfo: %s\n", version.Gitinfo)
 		fmt.Printf("buildInfo: %s\n", version.BuildInfo)
 		os.Exit(0)
