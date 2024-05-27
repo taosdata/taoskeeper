@@ -51,20 +51,14 @@ func Init() *http.Server {
 
 	checkHealth := api.NewCheckHealth(version.Version)
 	checkHealth.Init(router)
-	audit, err := api.NewAudit(conf)
-	if err != nil {
-		panic(err)
-	}
-	if err = audit.Init(router); err != nil {
-		panic(err)
-	}
+
 	adapter := api.NewAdapter(conf)
-	if err = adapter.Init(router); err != nil {
+	if err := adapter.Init(router); err != nil {
 		panic(err)
 	}
 
 	gen_metric := api.NewGeneralMetric(conf)
-	if err = gen_metric.Init(router); err != nil {
+	if err := gen_metric.Init(router); err != nil {
 		panic(err)
 	}
 

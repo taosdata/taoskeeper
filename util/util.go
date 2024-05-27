@@ -58,11 +58,6 @@ func GetCfg() *config.Config {
 		Metrics: config.MetricsConfig{
 			Database: "keeper_test_log",
 		},
-		Audit: config.AuditConfig{
-			Database: config.Database{
-				Name: "keepter_test_audit",
-			},
-		},
 	}
 	return c
 }

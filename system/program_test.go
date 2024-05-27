@@ -17,5 +17,4 @@ func TestStart(t *testing.T) {
 	conn, err := db.NewConnectorWithDb(config.Conf.TDengine.Username, config.Conf.TDengine.Password, config.Conf.TDengine.Host, config.Conf.TDengine.Port, config.Conf.Metrics.Database, config.Conf.TDengine.Usessl)
 	assert.NoError(t, err)
 	conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", config.Conf.Metrics.Database))
-	conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", config.Conf.Audit.Database))
 }
