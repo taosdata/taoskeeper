@@ -6,6 +6,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -184,6 +185,8 @@ var adapterTableSql = "create stable if not exists `adapter_requests` (" +
 	"`query_in_process` int unsigned, " +
 	"`write_in_process` int unsigned ) " +
 	"tags (`endpoint` varchar(32), `req_type` tinyint unsigned )"
+
+var errNoConnection = errors.New("no connection")
 
 func (a *Adapter) createTable() error {
 	if a.conn == nil {

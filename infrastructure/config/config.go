@@ -26,7 +26,6 @@ type Config struct {
 	TDengine         TDengineRestful `toml:"tdengine"`
 	Metrics          MetricsConfig   `toml:"metrics"`
 	Env              Environment     `toml:"environment"`
-	Audit            AuditConfig     `toml:"audit"`
 	Log              Log             `toml:"log"`
 
 	Transfer string

@@ -38,12 +38,6 @@ cachemodel = "none"
 # Whether running in cgroup.
 incgroup = false
 
-[audit]
-[audit.database]
-name = "audit"
-[audit.database.options]
-cachemodel = "none"
-
 [log]
 #path = "/var/log/taos"
 rotationCount = 5

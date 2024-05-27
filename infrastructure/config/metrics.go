@@ -27,7 +27,3 @@ type Database struct {
 	Name    string                 `toml:"name"`
 	Options map[string]interface{} `toml:"options"`
 }
-
-type AuditConfig struct {
-	Database Database `toml:"database"`
-}
