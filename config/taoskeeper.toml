@@ -32,7 +32,10 @@ tables = []
 
 # database options for db storing metrics data
 [metrics.databaseoptions]
-cachemodel = "none"
+vgroups = 1
+buffer = 64
+cachemodel = "both"
+
 
 [environment]
 # Whether running in cgroup.
