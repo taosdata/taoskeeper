@@ -141,12 +141,12 @@ func NewGeneralMetric(conf *config.Config) *GeneralMetric {
 		host:     conf.TDengine.Host,
 		port:     conf.TDengine.Port,
 		usessl:   conf.TDengine.Usessl,
-		database: conf.Metrics.Database,
+		database: conf.Metrics.Database.Name,
 		url: &url.URL{
 			Scheme:   protocol,
 			Host:     fmt.Sprintf("%s:%d", conf.TDengine.Host, conf.TDengine.Port),
 			Path:     "/influxdb/v1/write",
-			RawQuery: fmt.Sprintf("db=%s&precision=ms", conf.Metrics.Database),
+			RawQuery: fmt.Sprintf("db=%s&precision=ms", conf.Metrics.Database.Name),
 		},
 	}
 	return imp

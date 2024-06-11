@@ -44,8 +44,8 @@ func NewAdapter(c *config.Config) *Adapter {
 		host:      c.TDengine.Host,
 		port:      c.TDengine.Port,
 		usessl:    c.TDengine.Usessl,
-		db:        c.Metrics.Database,
-		dbOptions: c.Metrics.DatabaseOptions,
+		db:        c.Metrics.Database.Name,
+		dbOptions: c.Metrics.Database.Options,
 	}
 }
 

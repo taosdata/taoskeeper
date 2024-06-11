@@ -28,14 +28,14 @@ func TestMain(m *testing.M) {
 	conf = config.InitConfig()
 	log.ConfigLog()
 
-	conf.Metrics.Database = dbName
+	conf.Metrics.Database.Name = dbName
 	conn, err := db.NewConnector(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.TDengine.Usessl)
 	if err != nil {
 		panic(err)
 	}
 	defer conn.Close()
 	ctx := context.Background()
-	conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", conf.Metrics.Database))
+	conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", conf.Metrics.Database.Name))
 
 	if _, err = conn.Exec(ctx, fmt.Sprintf("create database if not exists %s", dbName)); err != nil {
 		logger.Errorf("execute sql: %s, error: %s", fmt.Sprintf("create database %s", dbName), err)
@@ -59,7 +59,7 @@ func TestMain(m *testing.M) {
 		CreateGrantInfoSql,
 		CreateKeeperSql,
 	}
-	CreatTables(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.TDengine.Usessl, conf.Metrics.Database, createList)
+	CreatTables(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.TDengine.Usessl, conf.Metrics.Database.Name, createList)
 
 	processor := process.NewProcessor(conf)
 	node := NewNodeExporter(processor)
@@ -232,7 +232,7 @@ func TestPutMetrics(t *testing.T) {
 	}
 
 	defer func() {
-		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", conf.Metrics.Database))
+		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", conf.Metrics.Database.Name))
 	}()
 
 	ctx := context.Background()
