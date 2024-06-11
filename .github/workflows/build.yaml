@@ -51,9 +51,6 @@ jobs:
       - name: start taosadapter
         run: nohup sudo taosadapter &
 
-      - name: Copy config file
-        run: sudo cp config/taoskeeper.toml /etc/taos/taoskeeper.toml
-
       - name: test
         run:
           go mod tidy && go test -v ./...
