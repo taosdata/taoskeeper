@@ -4,7 +4,6 @@ type MetricsConfig struct {
 	Prefix   string   `toml:"prefix"`
 	Database Database `toml:"database"`
 	Tables   []string `toml:"tables"`
-	// DatabaseOptions map[string]interface{} `toml:"databaseoptions"`
 }
 
 type TaosAdapter struct {
