@@ -56,7 +56,10 @@ func GetCfg() *config.Config {
 			Usessl:   false,
 		},
 		Metrics: config.MetricsConfig{
-			Database: "keeper_test_log",
+			Database: config.Database{
+				Name:    "keeper_test_log",
+				Options: map[string]interface{}{},
+			},
 		},
 	}
 	return c

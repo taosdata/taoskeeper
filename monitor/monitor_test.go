@@ -30,7 +30,7 @@ func TestStart(t *testing.T) {
 	}
 	log.ConfigLog()
 	router := web.CreateRouter(conf.Debug, &conf.Cors, false)
-	conf.Metrics.Database = "monitor"
+	conf.Metrics.Database.Name = "monitor"
 	reporter := api.NewReporter(conf)
 	reporter.Init(router)
 	conf.RotationInterval = "1s"
@@ -40,9 +40,9 @@ func TestStart(t *testing.T) {
 		SysMonitor.Deregister(k)
 	}
 
-	conn, err := db.NewConnectorWithDb(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.Metrics.Database, conf.TDengine.Usessl)
+	conn, err := db.NewConnectorWithDb(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.Metrics.Database.Name, conf.TDengine.Usessl)
 	assert.NoError(t, err)
-	conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", conf.Metrics.Database))
+	conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", conf.Metrics.Database.Name))
 
 }
 

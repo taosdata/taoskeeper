@@ -31,12 +31,12 @@ func TestHttps(t *testing.T) {
 	cfg.TDengine.Usessl = true
 	cfg.TDengine.Port = 34443
 
-	CreateDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.TDengine.Usessl, cfg.Metrics.Database, cfg.Metrics.DatabaseOptions)
+	CreateDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.TDengine.Usessl, cfg.Metrics.Database.Name, cfg.Metrics.Database.Options)
 
-	conn, err := db.NewConnectorWithDb(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.Metrics.Database, cfg.TDengine.Usessl)
+	conn, err := db.NewConnectorWithDb(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.Metrics.Database.Name, cfg.TDengine.Usessl)
 	assert.NoError(t, err)
 	defer func() {
-		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", cfg.Metrics.Database))
+		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", cfg.Metrics.Database.Name))
 	}()
 
 	data, err := conn.Query(context.Background(), "select server_version()")

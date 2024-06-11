@@ -1,10 +1,10 @@
 package config
 
 type MetricsConfig struct {
-	Prefix          string                 `toml:"prefix"`
-	Database        string                 `toml:"database"`
-	Tables          []string               `toml:"tables"`
-	DatabaseOptions map[string]interface{} `toml:"databaseoptions"`
+	Prefix   string   `toml:"prefix"`
+	Database Database `toml:"database"`
+	Tables   []string `toml:"tables"`
+	// DatabaseOptions map[string]interface{} `toml:"databaseoptions"`
 }
 
 type TaosAdapter struct {
