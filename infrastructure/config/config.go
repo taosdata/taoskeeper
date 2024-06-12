@@ -112,6 +112,14 @@ ReadConfig:
 	}
 
 	var conf Config
+
+	// if old format, change to new format
+	if !viper.IsSet("metrics.database.name") {
+		databaseName := viper.GetString("metrics.database")
+		viper.Set("metrics.database.name", databaseName)
+		viper.Set("metrics.database.options", viper.Get("metrics.databaseoptions"))
+	}
+
 	if err = viper.Unmarshal(&conf); err != nil {
 		panic(err)
 	}
