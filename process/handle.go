@@ -283,7 +283,7 @@ func NewProcessor(conf *config.Config) *Processor {
 	}
 	p := &Processor{
 		prefix:           conf.Metrics.Prefix,
-		db:               conf.Metrics.Database,
+		db:               conf.Metrics.Database.Name,
 		tableMap:         map[string]*Table{},
 		metricMap:        map[string]*Metric{},
 		ctx:              ctx,

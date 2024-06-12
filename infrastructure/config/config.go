@@ -112,6 +112,14 @@ ReadConfig:
 	}
 
 	var conf Config
+
+	// if old format, change to new format
+	if !viper.IsSet("metrics.database.name") {
+		databaseName := viper.GetString("metrics.database")
+		viper.Set("metrics.database.name", databaseName)
+		viper.Set("metrics.database.options", viper.Get("metrics.databaseoptions"))
+	}
+
 	if err = viper.Unmarshal(&conf); err != nil {
 		panic(err)
 	}
@@ -176,9 +184,9 @@ func init() {
 	_ = viper.BindEnv("metrics.prefix", "TAOS_KEEPER_METRICS_PREFIX")
 	pflag.String("metrics.prefix", "", `prefix in metrics names. Env "TAOS_KEEPER_METRICS_PREFIX"`)
 
-	viper.SetDefault("metrics.database", "log")
-	_ = viper.BindEnv("metrics.database", "TAOS_KEEPER_METRICS_DATABASE")
-	pflag.String("metrics.database", "log", `database for storing metrics data. Env "TAOS_KEEPER_METRICS_DATABASE"`)
+	viper.SetDefault("metrics.database.name", "log")
+	_ = viper.BindEnv("metrics.database.name", "TAOS_KEEPER_METRICS_DATABASE")
+	pflag.String("metrics.database.name", "log", `database for storing metrics data. Env "TAOS_KEEPER_METRICS_DATABASE"`)
 
 	viper.SetDefault("metrics.tables", []string{})
 	_ = viper.BindEnv("metrics.tables", "TAOS_KEEPER_METRICS_TABLES")

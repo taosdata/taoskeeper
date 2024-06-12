@@ -24,7 +24,7 @@ func ExpandMetricsFromConfig(ctx context.Context, conn *db.Connector, cfg *confi
 		tables[name] = struct{}{}
 	}
 
-	sql := fmt.Sprintf(GetStableNameListSql(), cfg.Database)
+	sql := fmt.Sprintf(GetStableNameListSql(), cfg.Database.Name)
 	data, err := conn.Query(ctx, sql)
 	if err != nil {
 		return nil, err

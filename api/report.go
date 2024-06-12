@@ -50,8 +50,8 @@ func NewReporter(conf *config.Config) *Reporter {
 		host:            conf.TDengine.Host,
 		port:            conf.TDengine.Port,
 		usessl:          conf.TDengine.Usessl,
-		dbname:          conf.Metrics.Database,
-		databaseOptions: conf.Metrics.DatabaseOptions,
+		dbname:          conf.Metrics.Database.Name,
+		databaseOptions: conf.Metrics.Database.Options,
 	}
 	r.totalRep.Store(0)
 	return r

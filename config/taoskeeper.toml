@@ -24,18 +24,17 @@ usessl = false
 # metrics prefix in metrics names.
 prefix = "taos"
 
-# database for storing metrics data
-database = "log"
-
 # export some tables that are not super table
 tables = []
 
+# database for storing metrics data
+[metrics.database]
+name = "log"
 # database options for db storing metrics data
-[metrics.databaseoptions]
+[metrics.database.options]
 vgroups = 1
 buffer = 64
 cachemodel = "both"
-
 
 [environment]
 # Whether running in cgroup.

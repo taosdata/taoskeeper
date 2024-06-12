@@ -52,7 +52,7 @@ func NewCommand(conf *config.Config) *Command {
 		},
 	}
 
-	conn, err := db.NewConnectorWithDb(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.Metrics.Database, conf.TDengine.Usessl)
+	conn, err := db.NewConnectorWithDb(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.Metrics.Database.Name, conf.TDengine.Usessl)
 	if err != nil {
 		logger.Error("## init db connect error", "error", err)
 		panic(err)
@@ -67,7 +67,7 @@ func NewCommand(conf *config.Config) *Command {
 			Scheme:   "http",
 			Host:     fmt.Sprintf("%s:%d", conf.TDengine.Host, conf.TDengine.Port),
 			Path:     "/influxdb/v1/write",
-			RawQuery: fmt.Sprintf("db=%s&precision=ms", conf.Metrics.Database),
+			RawQuery: fmt.Sprintf("db=%s&precision=ms", conf.Metrics.Database.Name),
 		},
 	}
 	return imp
@@ -212,7 +212,7 @@ func (cmd *Command) ProcessDrop(conf *config.Config) {
 		"taosadapter_restful_http_request_total",
 	}
 	ctx := context.Background()
-	logger.Infof("use database: %s", conf.Metrics.Database)
+	logger.Infof("use database: %s", conf.Metrics.Database.Name)
 
 	for _, stable := range dropStableList {
 		if _, err := cmd.conn.Exec(ctx, "DROP STABLE IF EXISTS "+stable); err != nil {
