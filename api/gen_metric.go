@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"regexp"
 
 	"net/url"
 	"strconv"
@@ -25,6 +26,8 @@ import (
 )
 
 var gmLogger = log.GetLogger("gen_metric")
+
+var MAX_SQL_LEN = 1000000
 
 type ColumnSeq struct {
 	tagNames    []string
@@ -82,9 +85,27 @@ type ClusterBasic struct {
 	ClusterVersion string `json:"cluster_version"`
 }
 
+type SlowSqlDetailInfo struct {
+	StartTs     string `json:"start_ts"`
+	RequestId   int64  `json:"request_id"`
+	QueryTime   int32  `json:"query_time"`
+	Code        int32  `json:"code"`
+	ErrorInfo   string `json:"error_info"`
+	Type        int8   `json:"type"`
+	RowsNum     int64  `json:"rows_num"`
+	Sql         string `json:"sql"`
+	ProcessName string `json:"process_name"`
+	ProcessId   string `json:"process_id"`
+	Db          string `json:"db"`
+	User        string `json:"user"`
+	Ip          string `json:"ip"`
+	ClusterId   string `json:"cluster_id"`
+}
+
 func (gm *GeneralMetric) Init(c gin.IRouter) error {
 	c.POST("/general-metric", gm.handleFunc())
 	c.POST("/taosd-cluster-basic", gm.handleTaosdClusterBasic())
+	c.POST("/slow-sql-detail-batch", gm.handleSlowSqlDetailBatch())
 
 	conn, err := db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database, gm.usessl)
 	if err != nil {
@@ -307,6 +328,89 @@ func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
 	}
 }
 
+func processString(input string) string {
+	// remove number in the beginning
+	re := regexp.MustCompile(`^\d+`)
+	input = re.ReplaceAllString(input, "")
+
+	// replage "."  to "_"
+	input = strings.ReplaceAll(input, ".", "_")
+
+	//  remove special characters
+	re = regexp.MustCompile(`[^a-zA-Z0-9_]`)
+	input = re.ReplaceAllString(input, "")
+
+	return input
+}
+
+func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if gm.conn == nil {
+			gmLogger.Error("no connection")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "no connection"})
+			return
+		}
+
+		data, err := c.GetRawData()
+		if err != nil {
+			gmLogger.WithError(err).Errorf("## get taos slow sql detail data error")
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get taos slow sql detail data error. %s", err)})
+			return
+		}
+		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
+			gmLogger.Trace("## receive taos slow sql detail data: ", string(data))
+		}
+
+		var request []SlowSqlDetailInfo
+
+		if err := json.Unmarshal(data, &request); err != nil {
+			gmLogger.WithError(err).Errorf("## parse taos slow sql detail %s error", string(data))
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse taos slow sql detail error: %s", err)})
+			return
+		}
+
+		var sql_head = "INSERT INTO `taos_slow_sql_detail` (tbname, `db`, `user`, `ip`, `cluster_id`, `start_ts`, `request_id`, `query_time`, `code`, `error_info`, `type`, `rows_num`, `sql`, `process_name`, `process_id`) values "
+		var buf bytes.Buffer
+		buf.WriteString(sql_head)
+		for _, slowSqlDetailInfo := range request {
+			if slowSqlDetailInfo.StartTs == "" {
+				gmLogger.Error("start_ts data is empty")
+				continue
+			}
+			var sub_table_name = slowSqlDetailInfo.User + "_" + slowSqlDetailInfo.Db + "_" + slowSqlDetailInfo.Ip + "_clusterId_" + slowSqlDetailInfo.ClusterId
+			sub_table_name = strings.ToLower(processString(sub_table_name))
+
+			var sql = fmt.Sprintf(
+				"('%s', '%s', '%s', '%s', '%s', %s, %d, %d, %d, '%s', %d, %d, '%s', '%s', '%s') ",
+				sub_table_name,
+				slowSqlDetailInfo.Db, slowSqlDetailInfo.User, slowSqlDetailInfo.Ip, slowSqlDetailInfo.ClusterId, slowSqlDetailInfo.StartTs, slowSqlDetailInfo.RequestId,
+				slowSqlDetailInfo.QueryTime, slowSqlDetailInfo.Code, slowSqlDetailInfo.ErrorInfo, slowSqlDetailInfo.Type, slowSqlDetailInfo.RowsNum, slowSqlDetailInfo.Sql,
+				slowSqlDetailInfo.ProcessName, slowSqlDetailInfo.ProcessId)
+			if (buf.Len() + len(sql)) < MAX_SQL_LEN {
+				buf.WriteString(sql)
+			} else {
+				if _, err = gm.conn.Exec(context.Background(), buf.String()); err != nil {
+					gmLogger.WithError(err).Errorf("## insert taos_slow_sql_detail error")
+					c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("insert taos_slow_sql_detail error. %s", err)})
+					return
+				}
+				buf.Reset()
+				buf.WriteString(sql_head)
+				buf.WriteString(sql)
+			}
+		}
+
+		if buf.Len() > len(sql_head) {
+			if _, err = gm.conn.Exec(context.Background(), buf.String()); err != nil {
+				gmLogger.WithError(err).Errorf("## insert taos_slow_sql_detail error")
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("insert taos_slow_sql_detail error. %s", err)})
+				return
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{})
+	}
+}
+
 func writeTags(tags []Tag, stbName string, buf *bytes.Buffer) {
 	var nameArray []string
 	if columnSeq, ok := Load(stbName); ok {
@@ -476,5 +580,15 @@ func (gm *GeneralMetric) createSTables() error {
 		return errNoConnection
 	}
 	_, err := gm.conn.Exec(context.Background(), createTableSql)
+	if err != nil {
+		return err
+	}
+
+	createTableSql = "create stable if not exists taos_slow_sql_detail" +
+		" (start_ts TIMESTAMP, request_id BIGINT PRIMARY KEY, query_time INT, code INT, error_info varchar(128), " +
+		"type TINYINT, rows_num BIGINT, sql varchar(10000), process_name varchar(32), process_id varchar(32)) " +
+		"tags (db varchar(1024), `user` varchar(32), ip varchar(32), cluster_id varchar(32))"
+
+	_, err = gm.conn.Exec(context.Background(), createTableSql)
 	return err
 }
