@@ -87,7 +87,7 @@ type ClusterBasic struct {
 
 type SlowSqlDetailInfo struct {
 	StartTs     string `json:"start_ts"`
-	RequestId   int64  `json:"request_id"`
+	RequestId   string `json:"request_id"`
 	QueryTime   int32  `json:"query_time"`
 	Code        int32  `json:"code"`
 	ErrorInfo   string `json:"error_info"`
@@ -381,7 +381,7 @@ func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
 			sub_table_name = strings.ToLower(processString(sub_table_name))
 
 			var sql = fmt.Sprintf(
-				"('%s', '%s', '%s', '%s', '%s', %s, %d, %d, %d, '%s', %d, %d, '%s', '%s', '%s') ",
+				"('%s', '%s', '%s', '%s', '%s', %s, %s, %d, %d, '%s', %d, %d, '%s', '%s', '%s') ",
 				sub_table_name,
 				slowSqlDetailInfo.Db, slowSqlDetailInfo.User, slowSqlDetailInfo.Ip, slowSqlDetailInfo.ClusterId, slowSqlDetailInfo.StartTs, slowSqlDetailInfo.RequestId,
 				slowSqlDetailInfo.QueryTime, slowSqlDetailInfo.Code, slowSqlDetailInfo.ErrorInfo, slowSqlDetailInfo.Type, slowSqlDetailInfo.RowsNum, slowSqlDetailInfo.Sql,

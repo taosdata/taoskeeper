@@ -205,7 +205,7 @@ func TestSlowSqlDetail(t *testing.T) {
 		ts:     1703226836762,
 		data: `[{
 			"start_ts": "1703226836762",
-			"request_id": 1,
+			"request_id": "1",
 			"query_time": 100,
 			"code": 0,
 			"error_info": "",
@@ -221,7 +221,7 @@ func TestSlowSqlDetail(t *testing.T) {
 			},
 			{
 			"start_ts": "1703226836763",
-			"request_id": 2,
+			"request_id": "2",
 			"query_time": 100,
 			"code": 0,
 			"error_info": "",
