@@ -585,7 +585,7 @@ func (gm *GeneralMetric) createSTables() error {
 	}
 
 	createTableSql = "create stable if not exists taos_slow_sql_detail" +
-		" (start_ts TIMESTAMP, request_id BIGINT PRIMARY KEY, query_time INT, code INT, error_info varchar(128), " +
+		" (start_ts TIMESTAMP, request_id BIGINT UNSIGNED PRIMARY KEY, query_time INT, code INT, error_info varchar(128), " +
 		"type TINYINT, rows_num BIGINT, sql varchar(10000), process_name varchar(32), process_id varchar(32)) " +
 		"tags (db varchar(1024), `user` varchar(32), ip varchar(32), cluster_id varchar(32))"
 
