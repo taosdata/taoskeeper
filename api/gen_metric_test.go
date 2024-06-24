@@ -227,7 +227,7 @@ func TestSlowSqlDetail(t *testing.T) {
 			"error_info": "",
 			"type": 1,
 			"rows_num": 5,
-			"sql": "select * from bcd;",
+			"sql": "select * from bcd;'",
 			"process_name": "abc",
 			"process_id": "123",
 			"db": "dbname",

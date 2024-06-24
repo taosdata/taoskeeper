@@ -379,6 +379,7 @@ func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
 			}
 
 			// cut string to max len
+			slowSqlDetailInfo.Sql = strings.ReplaceAll(slowSqlDetailInfo.Sql, "'", "''")
 			slowSqlDetailInfo.Sql = util.SafeSubstring(slowSqlDetailInfo.Sql, 16384)
 			slowSqlDetailInfo.ClusterId = util.SafeSubstring(slowSqlDetailInfo.ClusterId, 32)
 			slowSqlDetailInfo.Db = util.SafeSubstring(slowSqlDetailInfo.Db, 1024)
@@ -402,7 +403,7 @@ func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
 				buf.WriteString(sql)
 			} else {
 				if _, err = gm.conn.Exec(context.Background(), buf.String()); err != nil {
-					gmLogger.WithError(err).Errorf("## insert taos_slow_sql_detail error")
+					gmLogger.WithError(err).Errorf("## insert taos_slow_sql_detail error, the sql is : %s", buf.String())
 					c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("insert taos_slow_sql_detail error. %s", err)})
 					return
 				}
