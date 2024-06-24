@@ -377,7 +377,19 @@ func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
 				gmLogger.Error("start_ts data is empty")
 				continue
 			}
-			var sub_table_name = slowSqlDetailInfo.User + "_" + slowSqlDetailInfo.Db + "_" + slowSqlDetailInfo.Ip + "_clusterId_" + slowSqlDetailInfo.ClusterId
+
+			// cut string to max len
+			slowSqlDetailInfo.Sql = util.SafeSubstring(slowSqlDetailInfo.Sql, 16384)
+			slowSqlDetailInfo.ClusterId = util.SafeSubstring(slowSqlDetailInfo.ClusterId, 32)
+			slowSqlDetailInfo.Db = util.SafeSubstring(slowSqlDetailInfo.Db, 1024)
+			slowSqlDetailInfo.User = util.SafeSubstring(slowSqlDetailInfo.User, 32)
+			slowSqlDetailInfo.Ip = util.SafeSubstring(slowSqlDetailInfo.Ip, 32)
+			slowSqlDetailInfo.ProcessName = util.SafeSubstring(slowSqlDetailInfo.ProcessName, 32)
+			slowSqlDetailInfo.ProcessId = util.SafeSubstring(slowSqlDetailInfo.ProcessId, 32)
+			slowSqlDetailInfo.ErrorInfo = util.SafeSubstring(slowSqlDetailInfo.ErrorInfo, 128)
+
+			// max len 192
+			var sub_table_name = slowSqlDetailInfo.User + "_" + util.SafeSubstring(slowSqlDetailInfo.Db, 80) + "_" + slowSqlDetailInfo.Ip + "_clusterId_" + slowSqlDetailInfo.ClusterId
 			sub_table_name = strings.ToLower(processString(sub_table_name))
 
 			var sql = fmt.Sprintf(
@@ -586,7 +598,7 @@ func (gm *GeneralMetric) createSTables() error {
 
 	createTableSql = "create stable if not exists taos_slow_sql_detail" +
 		" (start_ts TIMESTAMP, request_id BIGINT UNSIGNED PRIMARY KEY, query_time INT, code INT, error_info varchar(128), " +
-		"type TINYINT, rows_num BIGINT, sql varchar(10000), process_name varchar(32), process_id varchar(32)) " +
+		"type TINYINT, rows_num BIGINT, sql varchar(16384), process_name varchar(32), process_id varchar(32)) " +
 		"tags (db varchar(1024), `user` varchar(32), ip varchar(32), cluster_id varchar(32))"
 
 	_, err = gm.conn.Exec(context.Background(), createTableSql)
