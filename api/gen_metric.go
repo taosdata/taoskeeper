@@ -25,6 +25,7 @@ import (
 	"github.com/taosdata/taoskeeper/util"
 )
 
+var re = regexp.MustCompile("'+")
 var gmLogger = log.GetLogger("gen_metric")
 
 var MAX_SQL_LEN = 1000000
@@ -379,6 +380,7 @@ func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
 			}
 
 			// cut string to max len
+			slowSqlDetailInfo.Sql = re.ReplaceAllString(slowSqlDetailInfo.Sql, "'") // 将匹配到的部分替换为一个单引号
 			slowSqlDetailInfo.Sql = strings.ReplaceAll(slowSqlDetailInfo.Sql, "'", "''")
 			slowSqlDetailInfo.Sql = util.SafeSubstring(slowSqlDetailInfo.Sql, 16384)
 			slowSqlDetailInfo.ClusterId = util.SafeSubstring(slowSqlDetailInfo.ClusterId, 32)
