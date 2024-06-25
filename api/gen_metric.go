@@ -385,6 +385,9 @@ func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
 			slowSqlDetailInfo.Sql = util.SafeSubstring(slowSqlDetailInfo.Sql, 16384)
 			slowSqlDetailInfo.ClusterId = util.SafeSubstring(slowSqlDetailInfo.ClusterId, 32)
 			slowSqlDetailInfo.Db = util.SafeSubstring(slowSqlDetailInfo.Db, 1024)
+			if slowSqlDetailInfo.Db == "" {
+				slowSqlDetailInfo.Db = "unknown"
+			}
 			slowSqlDetailInfo.User = util.SafeSubstring(slowSqlDetailInfo.User, 32)
 			slowSqlDetailInfo.Ip = util.SafeSubstring(slowSqlDetailInfo.Ip, 32)
 			slowSqlDetailInfo.ProcessName = util.SafeSubstring(slowSqlDetailInfo.ProcessName, 32)
