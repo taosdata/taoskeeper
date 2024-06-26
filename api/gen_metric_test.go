@@ -13,14 +13,19 @@ import (
 	"github.com/taosdata/taoskeeper/util"
 )
 
+var router_inited bool = false
+
 func TestClusterBasic(t *testing.T) {
 	cfg := util.GetCfg()
 
 	CreateDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.TDengine.Usessl, cfg.Metrics.Database.Name, cfg.Metrics.Database.Options)
 
 	gm := NewGeneralMetric(cfg)
-	err := gm.Init(router)
-	assert.NoError(t, err)
+	if !router_inited {
+		err := gm.Init(router)
+		assert.NoError(t, err)
+		router_inited = true
+	}
 
 	testcfg := struct {
 		name   string
@@ -55,6 +60,69 @@ func TestClusterBasic(t *testing.T) {
 		assert.Equal(t, testcfg.expect, data.Data[0][1])
 	})
 
+	testcfg = struct {
+		name   string
+		ts     int64
+		tbname string
+		data   string
+		expect string
+	}{
+		name:   "1",
+		tbname: "taos_slow_sql_detail",
+		ts:     1703226836762,
+		data: `[{
+			"start_ts": "1703226836762",
+			"request_id": "1",
+			"query_time": 100,
+			"code": 0,
+			"error_info": "",
+			"type": 1,
+			"rows_num": 5,
+			"sql": "select * from abc;",
+			"process_name": "abc",
+			"process_id": "123",
+			"db": "dbname",
+			"user": "root",
+			"ip": "127.0.0.1",
+			"cluster_id": "1234567"
+			},
+			{
+			"start_ts": "1703226836763",
+			"request_id": "2",
+			"query_time": 100,
+			"code": 0,
+			"error_info": "",
+			"type": 1,
+			"rows_num": 5,
+			"sql": "insert into abc ('a', 'b') values ('aaa', 'bbb');",
+			"process_name": "abc",
+			"process_id": "123",
+			"db": "dbname",
+			"user": "root",
+			"ip": "127.0.0.1",
+			"cluster_id": "1234567"
+			}]`,
+		expect: "1234567",
+	}
+
+	conn, err = db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database, gm.usessl)
+	assert.NoError(t, err)
+	defer func() {
+		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database))
+	}()
+
+	t.Run(testcfg.name, func(t *testing.T) {
+		w := httptest.NewRecorder()
+		body := strings.NewReader(testcfg.data)
+		req, _ := http.NewRequest(http.MethodPost, "/slow-sql-detail-batch", body)
+		router.ServeHTTP(w, req)
+		assert.Equal(t, 200, w.Code)
+
+		data, err := conn.Query(context.Background(), fmt.Sprintf("select start_ts, cluster_id from %s.%s where start_ts=%d", gm.database, testcfg.tbname, testcfg.ts))
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(data.Data))
+		assert.Equal(t, testcfg.expect, data.Data[0][1])
+	})
 }
 
 func TestGenMetric(t *testing.T) {
@@ -63,8 +131,11 @@ func TestGenMetric(t *testing.T) {
 	CreateDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.TDengine.Usessl, cfg.Metrics.Database.Name, cfg.Metrics.Database.Options)
 
 	gm := NewGeneralMetric(cfg)
-	// err := gm.Init(router)
-	// assert.NoError(t, err)
+	if !router_inited {
+		err := gm.Init(router)
+		assert.NoError(t, err)
+		router_inited = true
+	}
 
 	testcfg := struct {
 		name   string
@@ -182,79 +253,4 @@ func TestGenMetric(t *testing.T) {
 			}
 		}
 	})
-}
-
-func TestSlowSqlDetail(t *testing.T) {
-	cfg := util.GetCfg()
-
-	CreateDatabase(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.TDengine.Usessl, cfg.Metrics.Database.Name, cfg.Metrics.Database.Options)
-
-	gm := NewGeneralMetric(cfg)
-	err := gm.Init(router)
-	assert.NoError(t, err)
-
-	testcfg := struct {
-		name   string
-		ts     int64
-		tbname string
-		data   string
-		expect string
-	}{
-		name:   "1",
-		tbname: "taos_slow_sql_detail",
-		ts:     1703226836762,
-		data: `[{
-			"start_ts": "1703226836762",
-			"request_id": "1",
-			"query_time": 100,
-			"code": 0,
-			"error_info": "",
-			"type": 1,
-			"rows_num": 5,
-			"sql": "select * from abc;",
-			"process_name": "abc",
-			"process_id": "123",
-			"db": "dbname",
-			"user": "root",
-			"ip": "127.0.0.1",
-			"cluster_id": "1234567"
-			},
-			{
-			"start_ts": "1703226836763",
-			"request_id": "2",
-			"query_time": 100,
-			"code": 0,
-			"error_info": "",
-			"type": 1,
-			"rows_num": 5,
-			"sql": "insert into abc ('a', 'b') values ('aaa', 'bbb');",
-			"process_name": "abc",
-			"process_id": "123",
-			"db": "dbname",
-			"user": "root",
-			"ip": "127.0.0.1",
-			"cluster_id": "1234567"
-			}]`,
-		expect: "1234567",
-	}
-
-	conn, err := db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database, gm.usessl)
-	assert.NoError(t, err)
-	defer func() {
-		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database))
-	}()
-
-	t.Run(testcfg.name, func(t *testing.T) {
-		w := httptest.NewRecorder()
-		body := strings.NewReader(testcfg.data)
-		req, _ := http.NewRequest(http.MethodPost, "/slow-sql-detail-batch", body)
-		router.ServeHTTP(w, req)
-		assert.Equal(t, 200, w.Code)
-
-		data, err := conn.Query(context.Background(), fmt.Sprintf("select start_ts, cluster_id from %s.%s where start_ts=%d", gm.database, testcfg.tbname, testcfg.ts))
-		assert.NoError(t, err)
-		assert.Equal(t, 1, len(data.Data))
-		assert.Equal(t, testcfg.expect, data.Data[0][1])
-	})
-
 }
