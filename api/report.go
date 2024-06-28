@@ -18,17 +18,17 @@ import (
 var logger = log.GetLogger("report")
 
 var createList = []string{
-	CreateClusterInfoSql,
-	CreateDnodeSql,
-	CreateMnodeSql,
-	CreateDnodeInfoSql,
-	CreateDataDirSql,
-	CreateLogDirSql,
-	CreateTempDirSql,
-	CreateVgroupsInfoSql,
-	CreateVnodeRoleSql,
-	CreateSummarySql,
-	CreateGrantInfoSql,
+	// CreateClusterInfoSql,
+	// CreateDnodeSql,
+	// CreateMnodeSql,
+	// CreateDnodeInfoSql,
+	// CreateDataDirSql,
+	// CreateLogDirSql,
+	// CreateTempDirSql,
+	// CreateVgroupsInfoSql,
+	// CreateVnodeRoleSql,
+	// CreateSummarySql,
+	// CreateGrantInfoSql,
 	CreateKeeperSql,
 }
 
@@ -37,6 +37,7 @@ type Reporter struct {
 	password        string
 	host            string
 	port            int
+	usessl          bool
 	dbname          string
 	databaseOptions map[string]interface{}
 	totalRep        atomic.Value
@@ -48,8 +49,9 @@ func NewReporter(conf *config.Config) *Reporter {
 		password:        conf.TDengine.Password,
 		host:            conf.TDengine.Host,
 		port:            conf.TDengine.Port,
-		dbname:          conf.Metrics.Database,
-		databaseOptions: conf.Metrics.DatabaseOptions,
+		usessl:          conf.TDengine.Usessl,
+		dbname:          conf.Metrics.Database.Name,
+		databaseOptions: conf.Metrics.Database.Options,
 	}
 	r.totalRep.Store(0)
 	return r
@@ -68,7 +70,7 @@ func (r *Reporter) Init(c gin.IRouter) {
 }
 
 func (r *Reporter) getConn() *db.Connector {
-	conn, err := db.NewConnector(r.username, r.password, r.host, r.port)
+	conn, err := db.NewConnector(r.username, r.password, r.host, r.port, r.usessl)
 	if err != nil {
 		logger.WithError(err).Error("connect to database error")
 		panic(err)
@@ -102,14 +104,14 @@ func (r *Reporter) detectClusterInfoFieldType() {
 	r.detectFieldType(ctx, conn, "cluster_info", "tbs_total", "bigint")
 
 	// add column `topics_total` and `streams_total` from TD-22032
-	if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "topics_total"); !exists {
-		logger.Warningf("## %s.cluster_info.topics_total not exists, will add it", r.dbname)
-		r.addColumn(ctx, conn, "cluster_info", "topics_total", "int")
-	}
-	if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "streams_total"); !exists {
-		logger.Warningf("## %s.cluster_info.streams_total not exists, will add it", r.dbname)
-		r.addColumn(ctx, conn, "cluster_info", "streams_total", "int")
-	}
+	// if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "topics_total"); !exists {
+	// 	logger.Warningf("## %s.cluster_info.topics_total not exists, will add it", r.dbname)
+	// 	r.addColumn(ctx, conn, "cluster_info", "topics_total", "int")
+	// }
+	// if exists, _ := r.columnInfo(ctx, conn, "cluster_info", "streams_total"); !exists {
+	// 	logger.Warningf("## %s.cluster_info.streams_total not exists, will add it", r.dbname)
+	// 	r.addColumn(ctx, conn, "cluster_info", "streams_total", "int")
+	// }
 }
 
 func (r *Reporter) detectVgroupsInfoType() {
@@ -283,7 +285,7 @@ func (r *Reporter) generateCreateDBSql() string {
 
 func (r *Reporter) creatTables() {
 	ctx := context.Background()
-	conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname)
+	conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname, r.usessl)
 	if err != nil {
 		logger.WithError(err).Errorf("connect to database error")
 		return
@@ -333,7 +335,7 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 		}
 		sqls = append(sqls, insertLogSummary(report.LogInfos, report.DnodeID, report.DnodeEp, report.ClusterID, report.Ts))
 
-		conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname)
+		conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname, r.usessl)
 		if err != nil {
 			logger.WithError(err).Errorf("connect to database error")
 			return

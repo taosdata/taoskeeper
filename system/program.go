@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/taosdata/go-utils/web"
 	"github.com/taosdata/taoskeeper/api"
+	"github.com/taosdata/taoskeeper/cmd"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
 	"github.com/taosdata/taoskeeper/monitor"
@@ -23,26 +25,40 @@ var logger = log.GetLogger("program")
 func Init() *http.Server {
 	conf := config.InitConfig()
 	log.ConfigLog()
+
+	if len(conf.Transfer) > 0 || len(conf.Drop) > 0 {
+		cmd := cmd.NewCommand(conf)
+		cmd.Process(conf)
+		os.Exit(0)
+		return nil
+	}
+
 	router := web.CreateRouter(conf.Debug, &conf.Cors, false)
 
 	reporter := api.NewReporter(conf)
 	reporter.Init(router)
 	monitor.StartMonitor("", conf, reporter)
-	processor := process.NewProcessor(conf)
-	api.NewAdapterImporter(conf)
-	node := api.NewNodeExporter(processor)
-	node.Init(router)
+	go func() {
+		// wait for monitor to all metric received
+		time.Sleep(time.Second * 35)
+
+		processor := process.NewProcessor(conf)
+		node := api.NewNodeExporter(processor)
+		node.Init(router)
+	}()
+
+	//api.NewAdapterImporter(conf)
+
 	checkHealth := api.NewCheckHealth(version.Version)
 	checkHealth.Init(router)
-	audit, err := api.NewAudit(conf)
-	if err != nil {
-		panic(err)
-	}
-	if err = audit.Init(router); err != nil {
-		panic(err)
-	}
+
 	adapter := api.NewAdapter(conf)
-	if err = adapter.Init(router); err != nil {
+	if err := adapter.Init(router); err != nil {
+		panic(err)
+	}
+
+	gen_metric := api.NewGeneralMetric(conf)
+	if err := gen_metric.Init(router); err != nil {
 		panic(err)
 	}
 

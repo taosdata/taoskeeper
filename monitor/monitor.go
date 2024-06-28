@@ -59,7 +59,7 @@ func StartMonitor(identity string, conf *config.Config, reporter *api.Reporter) 
 			sql := fmt.Sprintf("insert into `keeper_monitor_%s` using keeper_monitor tags ('%s') values ( now, "+
 				" %f, %f, %d)", hex.EncodeToString(kn[:]), identity, cpuPercent, memPercent, totalReport)
 			conn, err := db.NewConnectorWithDb(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host,
-				conf.TDengine.Port, conf.Metrics.Database)
+				conf.TDengine.Port, conf.Metrics.Database.Name, conf.TDengine.Usessl)
 			if err != nil {
 				logger.WithError(err).Errorf("connect to database error")
 				return

@@ -2,13 +2,14 @@ package api
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
-	"github.com/taosdata/taoskeeper/db"
-	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/taosdata/taoskeeper/db"
+	"github.com/taosdata/taoskeeper/infrastructure/config"
 )
 
 func TestAdapter2(t *testing.T) {
@@ -19,9 +20,13 @@ func TestAdapter2(t *testing.T) {
 			Port:     6041,
 			Username: "root",
 			Password: "taosdata",
+			Usessl:   false,
 		},
 		Metrics: config.MetricsConfig{
-			Database: "adapter_report_test",
+			Database: config.Database{
+				Name:    "adapter_report_test",
+				Options: map[string]interface{}{},
+			},
 		},
 	}
 	a := NewAdapter(c)
@@ -41,7 +46,7 @@ func TestAdapter2(t *testing.T) {
 	router.ServeHTTP(w, req)
 	assert.Equal(t, 200, w.Code)
 
-	conn, err := db.NewConnectorWithDb(c.TDengine.Username, c.TDengine.Password, c.TDengine.Host, c.TDengine.Port, c.Metrics.Database)
+	conn, err := db.NewConnectorWithDb(c.TDengine.Username, c.TDengine.Password, c.TDengine.Host, c.TDengine.Port, c.Metrics.Database.Name, c.TDengine.Usessl)
 	defer func() {
 		_, _ = conn.Query(context.Background(), "drop database if exists adapter_report_test")
 	}()
@@ -85,4 +90,6 @@ func TestAdapter2(t *testing.T) {
 	assert.Equal(t, uint32(2), data.Data[0][13])
 	assert.Equal(t, uint32(1), data.Data[0][14])
 	assert.Equal(t, uint32(2), data.Data[0][15])
+
+	conn.Exec(context.Background(), "drop database "+c.Metrics.Database.Name)
 }

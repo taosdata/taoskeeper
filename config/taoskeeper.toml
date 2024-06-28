@@ -18,38 +18,28 @@ host = "127.0.0.1"
 port = 6041
 username = "root"
 password = "taosdata"
-
-# list of adapter that need to be monitored
-[taosAdapter]
-address = ["127.0.0.1:6041"]
+usessl = false
 
 [metrics]
 # metrics prefix in metrics names.
 prefix = "taos"
 
-# database for storing metrics data
-database = "log"
-
 # export some tables that are not super table
 tables = []
 
+# database for storing metrics data
+[metrics.database]
+name = "log"
 # database options for db storing metrics data
-[metrics.databaseoptions]
+[metrics.database.options]
 vgroups = 1
 buffer = 64
+KEEP = 90
 cachemodel = "both"
 
 [environment]
 # Whether running in cgroup.
 incgroup = false
-
-[audit]
-[audit.database]
-name = "audit"
-[audit.database.options]
-vgroups = 1
-buffer = 64
-cachemodel = "both"
 
 [log]
 #path = "/var/log/taos"
