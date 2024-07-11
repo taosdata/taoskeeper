@@ -4,8 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
+	"strings"
 
 	_ "github.com/taosdata/driver-go/v3/taosRestful"
+	"github.com/taosdata/taoskeeper/infrastructure/log"
 )
 
 type Connector struct {
@@ -16,6 +19,8 @@ type Data struct {
 	Head []string        `json:"head"`
 	Data [][]interface{} `json:"data"`
 }
+
+var dbLogger = log.GetLogger("db")
 
 func NewConnector(username, password, host string, port int, usessl bool) (*Connector, error) {
 	var protocol string
@@ -48,6 +53,10 @@ func NewConnectorWithDb(username, password, host string, port int, dbname string
 func (c *Connector) Exec(ctx context.Context, sql string) (int64, error) {
 	res, err := c.db.ExecContext(ctx, sql)
 	if err != nil {
+		if strings.Contains(err.Error(), "Authentication failure") {
+			dbLogger.Error("Authentication failure")
+			os.Exit(1)
+		}
 		return 0, err
 	}
 	return res.RowsAffected()
@@ -56,6 +65,10 @@ func (c *Connector) Exec(ctx context.Context, sql string) (int64, error) {
 func (c *Connector) Query(ctx context.Context, sql string) (*Data, error) {
 	rows, err := c.db.QueryContext(ctx, sql)
 	if err != nil {
+		if strings.Contains(err.Error(), "Authentication failure") {
+			dbLogger.Error("Authentication failure")
+			os.Exit(1)
+		}
 		return nil, err
 	}
 	data := &Data{}
