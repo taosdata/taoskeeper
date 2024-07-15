@@ -34,6 +34,8 @@ func Init() *http.Server {
 	}
 
 	router := web.CreateRouter(conf.Debug, &conf.Cors, false)
+	router.Use(log.GinLog())
+	router.Use(log.GinRecoverLog())
 
 	reporter := api.NewReporter(conf)
 	reporter.Init(router)
