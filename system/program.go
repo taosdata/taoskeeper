@@ -122,5 +122,11 @@ func (p *program) Stop(s service.Service) error {
 	}
 
 	logger.Println("Server exiting")
+
+	ctxLog, cancelLog := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelLog()
+	logger.Println("Flushing Log")
+	log.Close(ctxLog)
+
 	return nil
 }

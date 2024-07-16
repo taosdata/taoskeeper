@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	_ "github.com/taosdata/driver-go/v3/taosRestful"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
@@ -55,6 +56,9 @@ func (c *Connector) Exec(ctx context.Context, sql string) (int64, error) {
 	if err != nil {
 		if strings.Contains(err.Error(), "Authentication failure") {
 			dbLogger.Error("Authentication failure")
+			ctxLog, cancelLog := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancelLog()
+			log.Close(ctxLog)
 			os.Exit(1)
 		}
 		return 0, err
@@ -67,6 +71,9 @@ func (c *Connector) Query(ctx context.Context, sql string) (*Data, error) {
 	if err != nil {
 		if strings.Contains(err.Error(), "Authentication failure") {
 			dbLogger.Error("Authentication failure")
+			ctxLog, cancelLog := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancelLog()
+			log.Close(ctxLog)
 			os.Exit(1)
 		}
 		return nil, err
