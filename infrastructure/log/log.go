@@ -9,9 +9,12 @@ import (
 	"path"
 	"sync"
 	"time"
+
 	rotatelogs "github.com/huskar-t/file-rotatelogs/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
+
+	"github.com/taosdata/taoskeeper/version"
 )
 
 var logger = logrus.New()
@@ -114,7 +117,7 @@ func ConfigLog() {
 			panic(err)
 		}
 		writer, err := rotatelogs.New(
-			path.Join(config.Conf.Log.Path, fmt.Sprintf("taoskeeper_%%Y_%%m_%%d_%%H_%%M.log")),
+			path.Join(config.Conf.Log.Path, fmt.Sprintf("%skeeper_%%Y_%%m_%%d_%%H_%%M.log", version.CUS_PROMPT)),
 			rotatelogs.WithRotationCount(config.Conf.Log.RotationCount),
 			rotatelogs.WithRotationTime(config.Conf.Log.RotationTime),
 			rotatelogs.WithRotationSize(int64(config.Conf.Log.RotationSize)),
