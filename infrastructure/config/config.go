@@ -14,7 +14,7 @@ import (
 	"github.com/taosdata/taoskeeper/version"
 )
 
-var Name = "taoskeeper"
+var Name = fmt.Sprintf("%skeeper", version.CUS_PROMPT)
 
 type Config struct {
 	Cors             web.CorsConfig  `toml:"cors"`
@@ -60,9 +60,9 @@ func InitConfig() *Config {
 		cp = pflag.StringP("config", "c", "", fmt.Sprintf("config path default /etc/%s/%s.toml", version.CUS_PROMPT, Name))
 	}
 
-	transfer := pflag.StringP("transfer", "", "", "run taoskeeper in command mode, only support old_taosd_metric. transfer old metrics data to new tables and exit")
+	transfer := pflag.StringP("transfer", "", "", "run "+Name+" in command mode, only support old_taosd_metric. transfer old metrics data to new tables and exit")
 	fromTime := pflag.StringP("fromTime", "", "2020-01-01T00:00:00+08:00", "parameter of transfer, example: 2020-01-01T00:00:00+08:00")
-	drop := pflag.StringP("drop", "", "", "run taoskeeper in command mode, only support old_taosd_metric_stables. ")
+	drop := pflag.StringP("drop", "", "", "run "+Name+" in command mode, only support old_taosd_metric_stables. ")
 
 	v := pflag.BoolP("version", "V", false, "Print the version and exit")
 	help := pflag.BoolP("help", "h", false, "Print this help message and exit")
@@ -70,14 +70,14 @@ func InitConfig() *Config {
 	pflag.Parse()
 
 	if *help {
-		fmt.Fprintf(os.Stderr, "Usage of taosKeeper v%s:\n", version.Version)
+		fmt.Fprintf(os.Stderr, "Usage of %s v%s:\n", Name, version.Version)
 		pflag.CommandLine.SortFlags = false
 		pflag.PrintDefaults()
 		os.Exit(0)
 	}
 
 	if *v {
-		fmt.Printf("taoskeeper version: %s\n", version.Version)
+		fmt.Printf("%s version: %s\n", Name, version.Version)
 		fmt.Printf("git: %s\n", version.Gitinfo)
 		fmt.Printf("build: %s\n", version.BuildInfo)
 		os.Exit(0)
@@ -87,7 +87,7 @@ func InitConfig() *Config {
 		viper.SetConfigFile(*cp)
 	}
 
-	viper.SetEnvPrefix("taoskeeper")
+	viper.SetEnvPrefix(Name)
 	err := viper.BindPFlags(pflag.CommandLine)
 	if err != nil {
 		panic(err)
