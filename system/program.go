@@ -20,7 +20,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var logger = log.GetLogger("program")
+var logger = log.GetLogger("PRG")
 
 func Init() *http.Server {
 	conf := config.InitConfig()
@@ -33,7 +33,7 @@ func Init() *http.Server {
 		return nil
 	}
 
-	router := web.CreateRouter(conf.Debug, &conf.Cors, false)
+	router := web.CreateRouter(false, &conf.Cors, false)
 	router.Use(log.GinLog())
 	router.Use(log.GinRecoverLog())
 

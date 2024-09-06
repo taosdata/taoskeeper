@@ -22,14 +22,13 @@ func TestStart(t *testing.T) {
 	if conf == nil {
 		panic("config error")
 	}
-	conf.Debug = true
 	conf.Env.InCGroup = true
 	cpuCgroupDir := "/sys/fs/cgroup/cpu"
 	if _, err := os.Stat(cpuCgroupDir); os.IsNotExist(err) {
 		conf.Env.InCGroup = false
 	}
 	log.ConfigLog()
-	router := web.CreateRouter(conf.Debug, &conf.Cors, false)
+	router := web.CreateRouter(false, &conf.Cors, false)
 	conf.Metrics.Database.Name = "monitor"
 	reporter := api.NewReporter(conf)
 	reporter.Init(router)
@@ -42,7 +41,7 @@ func TestStart(t *testing.T) {
 
 	conn, err := db.NewConnectorWithDb(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.Metrics.Database.Name, conf.TDengine.Usessl)
 	assert.NoError(t, err)
-	conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", conf.Metrics.Database.Name))
+	conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", conf.Metrics.Database.Name), util.GetQidOwn())
 
 }
 

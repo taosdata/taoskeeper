@@ -7,9 +7,10 @@ import (
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
+	"github.com/taosdata/taoskeeper/util"
 )
 
-var builderLogger = log.GetLogger("builder")
+var builderLogger = log.GetLogger("BLD")
 
 func ExpandMetricsFromConfig(ctx context.Context, conn *db.Connector, cfg *config.MetricsConfig) (tables map[string]struct{}, err error) {
 	tables = make(map[string]struct{})
@@ -25,7 +26,7 @@ func ExpandMetricsFromConfig(ctx context.Context, conn *db.Connector, cfg *confi
 	}
 
 	sql := fmt.Sprintf(GetStableNameListSql(), cfg.Database.Name)
-	data, err := conn.Query(ctx, sql)
+	data, err := conn.Query(ctx, sql, util.GetQidOwn())
 	if err != nil {
 		return nil, err
 	}

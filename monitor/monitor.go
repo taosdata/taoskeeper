@@ -12,10 +12,11 @@ import (
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
+	"github.com/taosdata/taoskeeper/util"
 	"github.com/taosdata/taoskeeper/util/pool"
 )
 
-var logger = log.GetLogger("monitor")
+var logger = log.GetLogger("MON")
 
 func StartMonitor(identity string, conf *config.Config, reporter *api.Reporter) {
 	if len(identity) == 0 {
@@ -66,7 +67,7 @@ func StartMonitor(identity string, conf *config.Config, reporter *api.Reporter) 
 			}
 
 			ctx := context.Background()
-			if _, err = conn.Exec(ctx, sql); err != nil {
+			if _, err = conn.Exec(ctx, sql, util.GetQidOwn()); err != nil {
 				logger.Errorf("execute sql: %s, error: %s", sql, err)
 			}
 

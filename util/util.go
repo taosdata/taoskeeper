@@ -4,11 +4,23 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 )
 
-//https://github.com/containerd/cgroups/blob/main/utils.go
+// https://github.com/containerd/cgroups/blob/main/utils.go
+var globalCounter64 uint64
+var globalCounter32 uint32
+
+type contextKey string
+
+const TaosReqIDKey contextKey = "taos_req_id"
+
+func init() {
+	atomic.StoreUint64(&globalCounter64, 0)
+	atomic.StoreUint32(&globalCounter32, 0)
+}
 
 func ReadUint(path string) (uint64, error) {
 	v, err := os.ReadFile(path)
@@ -70,4 +82,35 @@ func SafeSubstring(s string, n int) string {
 		return s[:n]
 	}
 	return s
+}
+
+func GetQid(qidStr string) uint64 {
+	if qidStr == "" || !strings.HasPrefix(qidStr, "0x") {
+		qid32 := atomic.AddUint32(&globalCounter32, 1)
+		qid64 := uint64(qid32) << 8
+		return qid64
+	}
+
+	qid, err := strconv.ParseUint(qidStr[2:], 16, 64)
+	if err != nil {
+		qid32 := atomic.AddUint32(&globalCounter32, 1)
+		qid64 := uint64(qid32) << 8
+		return qid64
+	}
+
+	// clear the last byte
+	qid = qid &^ 0xFF
+
+	return qid
+}
+
+func GetQidOwn() uint64 {
+
+	id := atomic.AddUint64(&globalCounter64, 1)
+	if id > 0x00ffffffffffffff {
+		atomic.StoreUint64(&globalCounter64, 1)
+		id = 1
+	}
+	qid64 := uint64(config.Conf.InstanceID)<<56 | id
+	return qid64
 }

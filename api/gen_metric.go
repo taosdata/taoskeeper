@@ -26,7 +26,7 @@ import (
 )
 
 var re = regexp.MustCompile("'+")
-var gmLogger = log.GetLogger("gen_metric")
+var gmLogger = log.GetLogger("GEN")
 
 var MAX_SQL_LEN = 1000000
 
@@ -110,20 +110,20 @@ func (gm *GeneralMetric) Init(c gin.IRouter) error {
 
 	conn, err := db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database, gm.usessl)
 	if err != nil {
-		gmLogger.Error("## init db connect error", "error", err)
+		gmLogger.Error("init db connect error, msg:", err)
 		return err
 	}
 	gm.conn = conn
 
 	err = gm.createSTables()
 	if err != nil {
-		gmLogger.Error("## create stable error", "error", err)
+		gmLogger.Error("create stable error, msg:", err)
 		return err
 	}
 
 	err = gm.initColumnSeqMap()
 	if err != nil {
-		gmLogger.Error("## init  gColumnSeqMap error", "error", err)
+		gmLogger.Error("init  gColumnSeqMap error, msg:", err)
 		return err
 	}
 
@@ -176,6 +176,12 @@ func NewGeneralMetric(conf *config.Config) *GeneralMetric {
 
 func (gm *GeneralMetric) handleFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		qid := util.GetQid(c.GetHeader("X-QID"))
+
+		gmLogger := gmLogger.WithFields(
+			logrus.Fields{config.ReqIDKey: qid},
+		)
+
 		if gm.client == nil {
 			gmLogger.Error("no connection")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "no connection"})
@@ -184,7 +190,7 @@ func (gm *GeneralMetric) handleFunc() gin.HandlerFunc {
 
 		data, err := c.GetRawData()
 		if err != nil {
-			gmLogger.WithError(err).Errorf("## get general metric data error")
+			gmLogger.WithError(err).Errorf("get general metric data error, msg:%s", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get general metric data error. %s", err)})
 			return
 		}
@@ -192,11 +198,11 @@ func (gm *GeneralMetric) handleFunc() gin.HandlerFunc {
 		var request []StableArrayInfo
 
 		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-			gmLogger.Trace("## data: ", string(data))
+			gmLogger.Trace("data: ", string(data))
 		}
 
 		if err := json.Unmarshal(data, &request); err != nil {
-			gmLogger.WithError(err).Errorf("## parse general metric data %s error", string(data))
+			gmLogger.WithError(err).Errorf("parse general metric data error, data:%s", string(data))
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse general metric data error: %s", err)})
 			return
 		}
@@ -206,10 +212,10 @@ func (gm *GeneralMetric) handleFunc() gin.HandlerFunc {
 			return
 		}
 
-		err = gm.handleBatchMetrics(request)
+		err = gm.handleBatchMetrics(request, qid)
 
 		if err != nil {
-			gmLogger.WithError(err).Errorf("## process records error")
+			gmLogger.WithError(err).Errorf("process records error. %s", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("process records error. %s", err)})
 			return
 		}
@@ -218,7 +224,7 @@ func (gm *GeneralMetric) handleFunc() gin.HandlerFunc {
 	}
 }
 
-func (gm *GeneralMetric) handleBatchMetrics(request []StableArrayInfo) error {
+func (gm *GeneralMetric) handleBatchMetrics(request []StableArrayInfo, qid uint64) error {
 	var buf bytes.Buffer
 
 	for _, stableArrayInfo := range request {
@@ -251,21 +257,30 @@ func (gm *GeneralMetric) handleBatchMetrics(request []StableArrayInfo) error {
 	}
 
 	if buf.Len() > 0 {
-		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-			gmLogger.Tracef("## buf: %v", buf.String())
-		}
-		return gm.lineWriteBody(&buf)
+		return gm.lineWriteBody(&buf, qid)
 	}
 	return nil
 }
 
-func (gm *GeneralMetric) lineWriteBody(buf *bytes.Buffer) error {
+func (gm *GeneralMetric) lineWriteBody(buf *bytes.Buffer, qid uint64) error {
+	gmLogger := gmLogger.WithFields(
+		logrus.Fields{config.ReqIDKey: qid},
+	)
+
 	header := map[string][]string{
 		"Connection": {"keep-alive"},
 	}
+	req_data := buf.String()
+
+	// 构建新的 URL，增加 qid 参数
+	urlWithQid := *gm.url
+	query := urlWithQid.Query()
+	query.Set("qid", fmt.Sprintf("%d", qid))
+	urlWithQid.RawQuery = query.Encode()
+
 	req := &http.Request{
 		Method:     http.MethodPost,
-		URL:        gm.url,
+		URL:        &urlWithQid,
 		Proto:      "HTTP/1.1",
 		ProtoMajor: 1,
 		ProtoMinor: 1,
@@ -275,11 +290,19 @@ func (gm *GeneralMetric) lineWriteBody(buf *bytes.Buffer) error {
 	req.SetBasicAuth(gm.username, gm.password)
 
 	req.Body = io.NopCloser(buf)
+
+	startTime := time.Now()
 	resp, err := gm.client.Do(req)
 
+	endTime := time.Now()
+	latency := endTime.Sub(startTime)
+
 	if err != nil {
-		gmLogger.Errorf("writing metrics exception: %v", err)
+		gmLogger.Errorf("latency:%v, req_data:%v, url:%s, resp:%d, err:%v", latency, req_data, urlWithQid.String(), resp.StatusCode, err)
 		return err
+	}
+	if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
+		gmLogger.Tracef("latency:%v, req_data:%v, url:%s, resp:%d", latency, req_data, urlWithQid.String(), resp.StatusCode)
 	}
 
 	defer resp.Body.Close()
@@ -292,6 +315,12 @@ func (gm *GeneralMetric) lineWriteBody(buf *bytes.Buffer) error {
 
 func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		qid := util.GetQid(c.GetHeader("X-QID"))
+
+		gmLogger := gmLogger.WithFields(
+			logrus.Fields{config.ReqIDKey: qid},
+		)
+
 		if gm.conn == nil {
 			gmLogger.Error("no connection")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "no connection"})
@@ -300,18 +329,18 @@ func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
 
 		data, err := c.GetRawData()
 		if err != nil {
-			gmLogger.WithError(err).Errorf("## get taosd cluster basic data error")
+			gmLogger.WithError(err).Errorf("get taosd cluster basic data error, msg:%s", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get general metric data error. %s", err)})
 			return
 		}
 		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-			gmLogger.Trace("## receive taosd cluster basic data: ", string(data))
+			gmLogger.Trace("receive taosd cluster basic data:", string(data))
 		}
 
 		var request ClusterBasic
 
 		if err := json.Unmarshal(data, &request); err != nil {
-			gmLogger.WithError(err).Errorf("## parse general metric data %s error", string(data))
+			gmLogger.WithError(err).Errorf("parse general metric data error, data:%s, msg:%s", string(data), err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse general metric data error: %s", err)})
 			return
 		}
@@ -320,8 +349,8 @@ func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
 			"insert into %s.taosd_cluster_basic_%s using taosd_cluster_basic tags ('%s') values (%s, '%s', %d, '%s') ",
 			gm.database, request.ClusterId, request.ClusterId, request.Ts, request.FirstEp, request.FirstEpDnodeId, request.ClusterVersion)
 
-		if _, err = gm.conn.Exec(context.Background(), sql); err != nil {
-			gmLogger.WithError(err).Errorf("## insert taosd_cluster_basic error")
+		if _, err = gm.conn.Exec(context.Background(), sql, qid); err != nil {
+			gmLogger.WithError(err).Errorf("insert taosd_cluster_basic error, msg:%s", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("insert taosd_cluster_basic error. %s", err)})
 			return
 		}
@@ -346,6 +375,12 @@ func processString(input string) string {
 
 func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		qid := util.GetQid(c.GetHeader("X-QID"))
+
+		gmLogger := gmLogger.WithFields(
+			logrus.Fields{config.ReqIDKey: qid},
+		)
+
 		if gm.conn == nil {
 			gmLogger.Error("no connection")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "no connection"})
@@ -354,18 +389,18 @@ func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
 
 		data, err := c.GetRawData()
 		if err != nil {
-			gmLogger.WithError(err).Errorf("## get taos slow sql detail data error")
+			gmLogger.WithError(err).Errorf("get taos slow sql detail data error, msg:%s", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get taos slow sql detail data error. %s", err)})
 			return
 		}
 		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-			gmLogger.Trace("## receive taos slow sql detail data: ", string(data))
+			gmLogger.Trace("receive taos slow sql detail data: ", string(data))
 		}
 
 		var request []SlowSqlDetailInfo
 
 		if err := json.Unmarshal(data, &request); err != nil {
-			gmLogger.WithError(err).Errorf("## parse taos slow sql detail %s error", string(data))
+			gmLogger.WithError(err).Errorf("parse taos slow sql detail error, msg:%s", string(data))
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse taos slow sql detail error: %s", err)})
 			return
 		}
@@ -373,6 +408,7 @@ func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
 		var sql_head = "INSERT INTO `taos_slow_sql_detail` (tbname, `db`, `user`, `ip`, `cluster_id`, `start_ts`, `request_id`, `query_time`, `code`, `error_info`, `type`, `rows_num`, `sql`, `process_name`, `process_id`) values "
 		var buf bytes.Buffer
 		buf.WriteString(sql_head)
+		var qid_counter uint8 = 0
 		for _, slowSqlDetailInfo := range request {
 			if slowSqlDetailInfo.StartTs == "" {
 				gmLogger.Error("start_ts data is empty")
@@ -407,20 +443,21 @@ func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
 			if (buf.Len() + len(sql)) < MAX_SQL_LEN {
 				buf.WriteString(sql)
 			} else {
-				if _, err = gm.conn.Exec(context.Background(), buf.String()); err != nil {
-					gmLogger.WithError(err).Errorf("## insert taos_slow_sql_detail error, the sql is : %s", buf.String())
+				if _, err = gm.conn.Exec(context.Background(), buf.String(), qid|uint64((qid_counter%255))); err != nil {
+					gmLogger.WithError(err).Errorf("insert taos_slow_sql_detail error, the sql is : %s", buf.String())
 					c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("insert taos_slow_sql_detail error. %s", err)})
 					return
 				}
 				buf.Reset()
 				buf.WriteString(sql_head)
 				buf.WriteString(sql)
+				qid_counter++
 			}
 		}
 
 		if buf.Len() > len(sql_head) {
-			if _, err = gm.conn.Exec(context.Background(), buf.String()); err != nil {
-				gmLogger.WithError(err).Errorf("## insert taos_slow_sql_detail error")
+			if _, err = gm.conn.Exec(context.Background(), buf.String(), qid|uint64((qid_counter%255))); err != nil {
+				gmLogger.WithError(err).Errorf("insert taos_slow_sql_detail error, data:%s, msg:%s", buf.String(), err)
 				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("insert taos_slow_sql_detail error. %s", err)})
 				return
 			}
@@ -456,7 +493,7 @@ func writeTags(tags []Tag, stbName string, buf *bytes.Buffer) {
 				buf.WriteString(fmt.Sprintf(",%s=%s", name, util.EscapeInfluxProtocol(value)))
 			} else {
 				buf.WriteString(fmt.Sprintf(",%s=%s", name, "unknown"))
-				gmLogger.Errorf("## tag value is empty, tag name: %s", name)
+				gmLogger.Errorf("tag value is empty, tag name: %s", name)
 			}
 		} else {
 			buf.WriteString(fmt.Sprintf(",%s=%s", name, "unknown"))
@@ -546,7 +583,7 @@ func (gm *GeneralMetric) initColumnSeqMap() error {
     order by stable_name asc;
 	`, gm.database)
 
-	data, err := gm.conn.Query(context.Background(), query)
+	data, err := gm.conn.Query(context.Background(), query, util.GetQidOwn())
 
 	if err != nil {
 		return err
@@ -559,13 +596,13 @@ func (gm *GeneralMetric) initColumnSeqMap() error {
 	}
 	//set gColumnSeqMap with desc stables
 	for tableName, columnSeq := range gColumnSeqMap {
-		data, err := gm.conn.Query(context.Background(), fmt.Sprintf(`desc %s.%s;`, gm.database, tableName))
+		data, err := gm.conn.Query(context.Background(), fmt.Sprintf(`desc %s.%s;`, gm.database, tableName), util.GetQidOwn())
 
 		if err != nil {
 			return err
 		}
 
-		gmLogger.Tracef("## data: %v", data)
+		gmLogger.Tracef("data: %v", data)
 
 		if len(data.Data) < 1 || len(data.Data[0]) < 4 {
 			return fmt.Errorf("desc %s.%s error", gm.database, tableName)
@@ -585,7 +622,7 @@ func (gm *GeneralMetric) initColumnSeqMap() error {
 		Store(tableName, columnSeq)
 	}
 
-	gmLogger.Infof("## gColumnSeqMap: %v", gColumnSeqMap)
+	gmLogger.Infof("gColumnSeqMap: %v", gColumnSeqMap)
 	return nil
 }
 
@@ -597,7 +634,7 @@ func (gm *GeneralMetric) createSTables() error {
 	if gm.conn == nil {
 		return errNoConnection
 	}
-	_, err := gm.conn.Exec(context.Background(), createTableSql)
+	_, err := gm.conn.Exec(context.Background(), createTableSql, util.GetQidOwn())
 	if err != nil {
 		return err
 	}
@@ -607,6 +644,6 @@ func (gm *GeneralMetric) createSTables() error {
 		"type TINYINT, rows_num BIGINT, sql varchar(16384), process_name varchar(32), process_id varchar(32)) " +
 		"tags (db varchar(1024), `user` varchar(32), ip varchar(32), cluster_id varchar(32))"
 
-	_, err = gm.conn.Exec(context.Background(), createTableSql)
+	_, err = gm.conn.Exec(context.Background(), createTableSql, util.GetQidOwn())
 	return err
 }

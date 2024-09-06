@@ -18,6 +18,7 @@ import (
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
 	"github.com/taosdata/taoskeeper/process"
+	"github.com/taosdata/taoskeeper/util"
 )
 
 var router *gin.Engine
@@ -35,9 +36,9 @@ func TestMain(m *testing.M) {
 	}
 	defer conn.Close()
 	ctx := context.Background()
-	conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", conf.Metrics.Database.Name))
+	conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", conf.Metrics.Database.Name), util.GetQidOwn())
 
-	if _, err = conn.Exec(ctx, fmt.Sprintf("create database if not exists %s", dbName)); err != nil {
+	if _, err = conn.Exec(ctx, fmt.Sprintf("create database if not exists %s", dbName), util.GetQidOwn()); err != nil {
 		logger.Errorf("execute sql: %s, error: %s", fmt.Sprintf("create database %s", dbName), err)
 	}
 	gin.SetMode(gin.ReleaseMode)
@@ -65,7 +66,7 @@ func TestMain(m *testing.M) {
 	node := NewNodeExporter(processor)
 	node.Init(router)
 	m.Run()
-	if _, err = conn.Exec(ctx, fmt.Sprintf("drop database if exists %s", dbName)); err != nil {
+	if _, err = conn.Exec(ctx, fmt.Sprintf("drop database if exists %s", dbName), util.GetQidOwn()); err != nil {
 		logger.Errorf("execute sql: %s, error: %s", fmt.Sprintf("drop database %s", dbName), err)
 	}
 }
@@ -232,11 +233,11 @@ func TestPutMetrics(t *testing.T) {
 	}
 
 	defer func() {
-		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", conf.Metrics.Database.Name))
+		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", conf.Metrics.Database.Name), util.GetQidOwn())
 	}()
 
 	ctx := context.Background()
-	data, err := conn.Query(ctx, "select info from log_summary")
+	data, err := conn.Query(ctx, "select info from log_summary", util.GetQidOwn())
 	if err != nil {
 		logger.Errorf("execute sql: %s, error: %s", "select * from log_summary", err)
 		t.Fatal(err)
@@ -272,7 +273,7 @@ func TestPutMetrics(t *testing.T) {
 	}
 
 	for table, tableInfo := range tables {
-		data, err = conn.Query(ctx, fmt.Sprintf("select %s from %s", tableInfo.TsName, table))
+		data, err = conn.Query(ctx, fmt.Sprintf("select %s from %s", tableInfo.TsName, table), util.GetQidOwn())
 		if err != nil {
 			logger.Errorf("execute sql: %s, error: %s", "select * from "+table, err)
 			t.Fatal(err)
@@ -286,7 +287,7 @@ func TestPutMetrics(t *testing.T) {
 	conf.Drop = "old_taosd_metric_stables"
 	cmd.Process(conf)
 
-	data, err = conn.Query(ctx, "select * from  information_schema.ins_stables where stable_name = 'm_info'")
+	data, err = conn.Query(ctx, "select * from  information_schema.ins_stables where stable_name = 'm_info'", util.GetQidOwn())
 	if err != nil {
 		logger.Errorf("execute sql: %s, error: %s", "m_info is not droped", err)
 		t.Fatal(err)

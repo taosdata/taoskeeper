@@ -12,12 +12,14 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
+	"github.com/taosdata/taoskeeper/util"
 )
 
-var adapterLog = log.GetLogger("adapter")
+var adapterLog = log.GetLogger("ADP")
 
 type adapterReqType int
 
@@ -65,6 +67,12 @@ func (a *Adapter) Init(c gin.IRouter) error {
 
 func (a *Adapter) handleFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		qid := util.GetQid(c.GetHeader("X-QID"))
+
+		adapterLog := adapterLog.WithFields(
+			logrus.Fields{config.ReqIDKey: qid},
+		)
+
 		if a.conn == nil {
 			adapterLog.Error("no connection")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "no connection"})
@@ -73,23 +81,23 @@ func (a *Adapter) handleFunc() gin.HandlerFunc {
 
 		data, err := c.GetRawData()
 		if err != nil {
-			adapterLog.WithError(err).Errorf("## get adapter report  data error")
+			adapterLog.WithError(err).Errorf("get adapter report  data error")
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get adapter report data error. %s", err)})
 			return
 		}
-		adapterLog.Trace("## receive adapter report data", "data", string(data))
+		adapterLog.Trace("received adapter report data:", string(data))
 
 		var report AdapterReport
 		if err = json.Unmarshal(data, &report); err != nil {
-			adapterLog.WithError(err).Errorf("## parse adapter report data %s error", string(data))
+			adapterLog.WithError(err).Errorf("parse adapter report data error, msg:%s ", string(data))
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse adapter report data error: %s", err)})
 			return
 		}
 		sql := a.parseSql(report)
-		adapterLog.Debug("## adapter report", "sql", sql)
+		adapterLog.Debug("adapter report sql:", sql)
 
-		if _, err = a.conn.Exec(context.Background(), sql); err != nil {
-			adapterLog.Error("## adapter report error", "error", err)
+		if _, err = a.conn.Exec(context.Background(), sql, qid); err != nil {
+			adapterLog.Error("adapter report error, msg:", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -100,7 +108,7 @@ func (a *Adapter) handleFunc() gin.HandlerFunc {
 func (a *Adapter) initConnect() error {
 	conn, err := db.NewConnectorWithDb(a.username, a.password, a.host, a.port, a.db, a.usessl)
 	if err != nil {
-		adapterLog.Error("## init db connect error", "error", err)
+		adapterLog.Error("init db connect error, msg:", err)
 		return err
 	}
 	a.conn = conn
@@ -133,16 +141,22 @@ func (a *Adapter) tableName(endpoint string, reqType adapterReqType) string {
 }
 
 func (a *Adapter) createDatabase() error {
+	qid := util.GetQidOwn()
+
+	adapterLog := adapterLog.WithFields(
+		logrus.Fields{config.ReqIDKey: qid},
+	)
+
 	conn, err := db.NewConnector(a.username, a.password, a.host, a.port, a.usessl)
 	if err != nil {
 		return fmt.Errorf("connect to database error: %s", err)
 	}
 	defer func() { _ = conn.Close() }()
 	sql := a.createDBSql()
-	adapterLog.Info("## create database", "sql", sql)
-	_, err = conn.Exec(context.Background(), sql)
+	adapterLog.Info("create database, sql:", sql)
+	_, err = conn.Exec(context.Background(), sql, util.GetQidOwn())
 	if err != nil {
-		adapterLog.Error("## create database error", "error", err)
+		adapterLog.Error("create database error, msg:", err)
 		return err
 	}
 
@@ -192,7 +206,7 @@ func (a *Adapter) createTable() error {
 	if a.conn == nil {
 		return errNoConnection
 	}
-	_, err := a.conn.Exec(context.Background(), adapterTableSql)
+	_, err := a.conn.Exec(context.Background(), adapterTableSql, util.GetQidOwn())
 	return err
 }
 
