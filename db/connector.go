@@ -9,10 +9,11 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"github.com/taosdata/driver-go/v3/common"
+
 	_ "github.com/taosdata/driver-go/v3/taosRestful"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
-	"github.com/taosdata/taoskeeper/util"
 )
 
 type Connector struct {
@@ -56,7 +57,7 @@ func NewConnectorWithDb(username, password, host string, port int, dbname string
 
 func (c *Connector) Exec(ctx context.Context, sql string, qid uint64) (int64, error) {
 	dbLogger = dbLogger.WithFields(logrus.Fields{config.ReqIDKey: qid})
-	ctx = context.WithValue(ctx, util.TaosReqIDKey, qid)
+	ctx = context.WithValue(ctx, common.ReqIDKey, int64(qid))
 
 	startTime := time.Now()
 	res, err := c.db.ExecContext(ctx, sql)
@@ -85,7 +86,7 @@ func (c *Connector) Exec(ctx context.Context, sql string, qid uint64) (int64, er
 
 func (c *Connector) Query(ctx context.Context, sql string, qid uint64) (*Data, error) {
 	dbLogger = dbLogger.WithFields(logrus.Fields{config.ReqIDKey: qid})
-	ctx = context.WithValue(ctx, util.TaosReqIDKey, qid)
+	ctx = context.WithValue(ctx, common.ReqIDKey, int64(qid))
 
 	startTime := time.Now()
 	rows, err := c.db.QueryContext(ctx, sql)

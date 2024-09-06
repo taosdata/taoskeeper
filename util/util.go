@@ -13,10 +13,6 @@ import (
 var globalCounter64 uint64
 var globalCounter32 uint32
 
-type contextKey string
-
-const TaosReqIDKey contextKey = "taos_req_id"
-
 func init() {
 	atomic.StoreUint64(&globalCounter64, 0)
 	atomic.StoreUint32(&globalCounter32, 0)
