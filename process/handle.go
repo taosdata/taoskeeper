@@ -315,9 +315,9 @@ func (p *Processor) Prepare() {
 			if err != nil {
 				var tdEngineError *taosError.TaosError
 				if errors.As(err, &tdEngineError) {
-					logger.WithError(err).Errorf("table %s not exist, skip", tableName)
+					logger.Errorf("table %s not exist, skip it, error:%s", tableName, err)
 				} else {
-					logger.WithError(err).Errorf("could not get table %s metadata, skip", tableName)
+					logger.Errorf("could not get table %s metadata, skip it, error:%s", tableName, err)
 				}
 				return
 			}

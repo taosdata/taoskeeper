@@ -26,7 +26,7 @@ func CreateDatabase(username string, password string, host string, port int, use
 
 	conn, err := db.NewConnector(username, password, host, port, usessl)
 	if err != nil {
-		commonLogger.WithError(err).Errorf("connect to adapter error")
+		commonLogger.Errorf("connect to adapter error, msg: %v", err)
 		return
 	}
 
@@ -37,7 +37,7 @@ func CreateDatabase(username string, password string, host string, port int, use
 
 	for i := 0; i < 3; i++ {
 		if _, err := conn.Exec(ctx, createDBSql, util.GetQidOwn()); err != nil {
-			commonLogger.WithError(err).Errorf("try %v times: create database %s error %v", i+1, dbname, err)
+			commonLogger.Errorf("try %v times: create database %s error, msg:%v", i+1, dbname, err)
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -69,7 +69,7 @@ func CreatTables(username string, password string, host string, port int, usessl
 	ctx := context.Background()
 	conn, err := db.NewConnectorWithDb(username, password, host, port, dbname, usessl)
 	if err != nil {
-		commonLogger.WithError(err).Errorf("connect to database error")
+		commonLogger.Errorf("connect to database error, msg:%s", err)
 		return
 	}
 	defer closeConn(conn)
@@ -84,6 +84,6 @@ func CreatTables(username string, password string, host string, port int, usessl
 
 func closeConn(conn *db.Connector) {
 	if err := conn.Close(); err != nil {
-		commonLogger.WithError(err).Errorf("close connection error")
+		commonLogger.Errorf("close connection error, msg:%s", err)
 	}
 }

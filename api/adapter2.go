@@ -81,7 +81,7 @@ func (a *Adapter) handleFunc() gin.HandlerFunc {
 
 		data, err := c.GetRawData()
 		if err != nil {
-			adapterLog.WithError(err).Errorf("get adapter report  data error")
+			adapterLog.Errorf("get adapter report data error, msg:%s", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get adapter report data error. %s", err)})
 			return
 		}
@@ -89,7 +89,7 @@ func (a *Adapter) handleFunc() gin.HandlerFunc {
 
 		var report AdapterReport
 		if err = json.Unmarshal(data, &report); err != nil {
-			adapterLog.WithError(err).Errorf("parse adapter report data error, msg:%s ", string(data))
+			adapterLog.Errorf("parse adapter report data error, data:%s, error:%s", string(data), err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse adapter report data error: %s", err)})
 			return
 		}

@@ -228,7 +228,7 @@ func TestPutMetrics(t *testing.T) {
 	conn, err := db.NewConnectorWithDb(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host,
 		conf.TDengine.Port, dbName, conf.TDengine.Usessl)
 	if err != nil {
-		logger.WithError(err).Errorf("connect to database error")
+		logger.Errorf("connect to database error, msg:%s", err)
 		return
 	}
 

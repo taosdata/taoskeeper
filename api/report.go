@@ -80,7 +80,7 @@ func (r *Reporter) getConn() *db.Connector {
 
 	conn, err := db.NewConnector(r.username, r.password, r.host, r.port, r.usessl)
 	if err != nil {
-		logger.WithError(err).Error("connect to database error")
+		logger.Errorf("connect to database error, msg:%s", err)
 		panic(err)
 	}
 	return conn
@@ -175,7 +175,7 @@ func (r *Reporter) shouldDetectFields() bool {
 func (r *Reporter) serverVersion(ctx context.Context, conn *db.Connector) (version string, err error) {
 	res, err := conn.Query(ctx, "select server_version()", util.GetQidOwn())
 	if err != nil {
-		logger.WithError(err).Error("get server version error")
+		logger.Errorf("get server version error, msg:%s", err)
 		return
 	}
 
@@ -197,7 +197,7 @@ func (r *Reporter) serverVersion(ctx context.Context, conn *db.Connector) (versi
 func (r *Reporter) columnInfo(ctx context.Context, conn *db.Connector, table string, field string) (exists bool, colType string) {
 	res, err := conn.Query(ctx, fmt.Sprintf("select col_type from information_schema.ins_columns where table_name='%s' and db_name='%s' and col_name='%s'", table, r.dbname, field), util.GetQidOwn())
 	if err != nil {
-		logger.WithError(err).Errorf("get %s field type error", r.dbname)
+		logger.Errorf("get %s field type error, msg:%s", r.dbname, err)
 		panic(err)
 	}
 
@@ -219,7 +219,7 @@ func (r *Reporter) columnInfo(ctx context.Context, conn *db.Connector, table str
 func (r *Reporter) tagExist(ctx context.Context, conn *db.Connector, stable string, tag string) (exists bool) {
 	res, err := conn.Query(ctx, fmt.Sprintf("select tag_name from information_schema.ins_tags where stable_name='%s' and db_name='%s' and tag_name='%s'", stable, r.dbname, tag), util.GetQidOwn())
 	if err != nil {
-		logger.WithError(err).Errorf("get %s tag_name error", r.dbname)
+		logger.Errorf("get %s tag_name error, msg:%s", r.dbname, err)
 		panic(err)
 	}
 
@@ -239,21 +239,21 @@ func (r *Reporter) tagExist(ctx context.Context, conn *db.Connector, stable stri
 
 func (r *Reporter) dropColumn(ctx context.Context, conn *db.Connector, table string, field string) {
 	if _, err := conn.Exec(ctx, fmt.Sprintf("alter table %s.%s drop column %s", r.dbname, table, field), util.GetQidOwn()); err != nil {
-		logger.WithError(err).Errorf("drop column %s from table %s error", field, table)
+		logger.Errorf("drop column %s from table %s error, msg:%s", field, table, err)
 		panic(err)
 	}
 }
 
 func (r *Reporter) dropTag(ctx context.Context, conn *db.Connector, stable string, tag string) {
 	if _, err := conn.Exec(ctx, fmt.Sprintf("alter stable %s.%s drop tag %s", r.dbname, stable, tag), util.GetQidOwn()); err != nil {
-		logger.WithError(err).Errorf("drop tag %s from stable %s error", tag, stable)
+		logger.Errorf("drop tag %s from stable %s error, msg:%s", tag, stable, err)
 		panic(err)
 	}
 }
 
 func (r *Reporter) addColumn(ctx context.Context, conn *db.Connector, table string, field string, fieldType string) {
 	if _, err := conn.Exec(ctx, fmt.Sprintf("alter table %s.%s add column %s %s", r.dbname, table, field, fieldType), util.GetQidOwn()); err != nil {
-		logger.WithError(err).Errorf("add column %s to table %s error", field, table)
+		logger.Errorf("add column %s to table %s error, msg:%s", field, table, err)
 		panic(err)
 	}
 }
@@ -267,7 +267,7 @@ func (r *Reporter) createDatabase() {
 	logger.Warningf("create database sql: %s", createDBSql)
 
 	if _, err := conn.Exec(ctx, createDBSql, util.GetQidOwn()); err != nil {
-		logger.WithError(err).Errorf("create database %s error %v", r.dbname, err)
+		logger.Errorf("create database %s error, msg:%v", r.dbname, err)
 		panic(err)
 	}
 }
@@ -295,7 +295,7 @@ func (r *Reporter) creatTables() {
 	ctx := context.Background()
 	conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname, r.usessl)
 	if err != nil {
-		logger.WithError(err).Errorf("connect to database error")
+		logger.Errorf("connect to database error, msg:%s", err)
 		return
 	}
 	defer r.closeConn(conn)
@@ -310,7 +310,7 @@ func (r *Reporter) creatTables() {
 
 func (r *Reporter) closeConn(conn *db.Connector) {
 	if err := conn.Close(); err != nil {
-		logger.WithError(err).Errorf("close connection error")
+		logger.Errorf("close connection error, msg:%s", err)
 	}
 }
 
@@ -326,13 +326,13 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 		// data parse
 		data, err := c.GetRawData()
 		if err != nil {
-			logger.WithError(err).Errorf("receiving taosd data error")
+			logger.Errorf("receiving taosd data error, msg:%s", err)
 			return
 		}
 		var report Report
 		logger.Tracef("report data: %s", string(data))
 		if e := json.Unmarshal(data, &report); e != nil {
-			logger.WithError(e).Errorf("error occurred while unmarshal request data: %s ", data)
+			logger.Errorf("error occurred while unmarshal request, data:%s, error:%s", data, err)
 			return
 		}
 		var sqls []string
@@ -351,7 +351,7 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 
 		conn, err := db.NewConnectorWithDb(r.username, r.password, r.host, r.port, r.dbname, r.usessl)
 		if err != nil {
-			logger.WithError(err).Errorf("connect to database error")
+			logger.Errorf("connect to database error, msg:%s", err)
 			return
 		}
 		defer r.closeConn(conn)
@@ -360,7 +360,7 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 		for _, sql := range sqls {
 			logger.Tracef("execute sql %s", sql)
 			if _, err := conn.Exec(ctx, sql, util.GetQidOwn()); err != nil {
-				logger.WithError(err).Errorf("execute sql : %s", sql)
+				logger.Errorf("execute sql error, sql:%s, error:%s", sql, err)
 			}
 		}
 	}

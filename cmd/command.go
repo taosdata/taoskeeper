@@ -373,7 +373,7 @@ func (cmd *Command) TransferTaosdClusterBasicInfo() error {
 				if buf.Len() >= MAX_SQL_LEN {
 					rowsAffected, err := cmd.conn.Exec(context.Background(), buf.String(), util.GetQidOwn())
 					if err != nil {
-						logger.WithError(err).Errorf("insert taosd_cluster_basic error, msg:%s", err)
+						logger.Errorf("insert taosd_cluster_basic error, msg:%s", err)
 						return err
 					}
 					if rowsAffected <= 0 {
@@ -386,7 +386,7 @@ func (cmd *Command) TransferTaosdClusterBasicInfo() error {
 			if buf.Len() > 0 {
 				rowsAffected, err := cmd.conn.Exec(context.Background(), buf.String(), util.GetQidOwn())
 				if err != nil {
-					logger.WithError(err).Errorf("insert taosd_cluster_basic error, msg:%s", err)
+					logger.Errorf("insert taosd_cluster_basic error, msg:%s", err)
 					return err
 				}
 				if rowsAffected <= 0 {

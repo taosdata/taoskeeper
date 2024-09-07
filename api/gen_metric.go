@@ -190,7 +190,7 @@ func (gm *GeneralMetric) handleFunc() gin.HandlerFunc {
 
 		data, err := c.GetRawData()
 		if err != nil {
-			gmLogger.WithError(err).Errorf("get general metric data error, msg:%s", err)
+			gmLogger.Errorf("get general metric data error, msg:%s", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get general metric data error. %s", err)})
 			return
 		}
@@ -202,7 +202,7 @@ func (gm *GeneralMetric) handleFunc() gin.HandlerFunc {
 		}
 
 		if err := json.Unmarshal(data, &request); err != nil {
-			gmLogger.WithError(err).Errorf("parse general metric data error, data:%s", string(data))
+			gmLogger.Errorf("parse general metric data error, data:%s, error:%s", string(data), err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse general metric data error: %s", err)})
 			return
 		}
@@ -215,7 +215,7 @@ func (gm *GeneralMetric) handleFunc() gin.HandlerFunc {
 		err = gm.handleBatchMetrics(request, qid)
 
 		if err != nil {
-			gmLogger.WithError(err).Errorf("process records error. %s", err)
+			gmLogger.Errorf("process records error. %s", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("process records error. %s", err)})
 			return
 		}
@@ -329,7 +329,7 @@ func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
 
 		data, err := c.GetRawData()
 		if err != nil {
-			gmLogger.WithError(err).Errorf("get taosd cluster basic data error, msg:%s", err)
+			gmLogger.Errorf("get taosd cluster basic data error, msg:%s", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get general metric data error. %s", err)})
 			return
 		}
@@ -340,7 +340,7 @@ func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
 		var request ClusterBasic
 
 		if err := json.Unmarshal(data, &request); err != nil {
-			gmLogger.WithError(err).Errorf("parse general metric data error, data:%s, msg:%s", string(data), err)
+			gmLogger.Errorf("parse general metric data error, data:%s, msg:%s", string(data), err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse general metric data error: %s", err)})
 			return
 		}
@@ -350,7 +350,7 @@ func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
 			gm.database, request.ClusterId, request.ClusterId, request.Ts, request.FirstEp, request.FirstEpDnodeId, request.ClusterVersion)
 
 		if _, err = gm.conn.Exec(context.Background(), sql, qid); err != nil {
-			gmLogger.WithError(err).Errorf("insert taosd_cluster_basic error, msg:%s", err)
+			gmLogger.Errorf("insert taosd_cluster_basic error, msg:%s", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("insert taosd_cluster_basic error. %s", err)})
 			return
 		}
@@ -389,7 +389,7 @@ func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
 
 		data, err := c.GetRawData()
 		if err != nil {
-			gmLogger.WithError(err).Errorf("get taos slow sql detail data error, msg:%s", err)
+			gmLogger.Errorf("get taos slow sql detail data error, msg:%s", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("get taos slow sql detail data error. %s", err)})
 			return
 		}
@@ -400,7 +400,7 @@ func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
 		var request []SlowSqlDetailInfo
 
 		if err := json.Unmarshal(data, &request); err != nil {
-			gmLogger.WithError(err).Errorf("parse taos slow sql detail error, msg:%s", string(data))
+			gmLogger.Errorf("parse taos slow sql detail error, msg:%s", string(data))
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("parse taos slow sql detail error: %s", err)})
 			return
 		}
@@ -444,7 +444,7 @@ func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
 				buf.WriteString(sql)
 			} else {
 				if _, err = gm.conn.Exec(context.Background(), buf.String(), qid|uint64((qid_counter%255))); err != nil {
-					gmLogger.WithError(err).Errorf("insert taos_slow_sql_detail error, the sql is : %s", buf.String())
+					gmLogger.Errorf("insert taos_slow_sql_detail error, sql:%s, error:%s", buf.String(), err)
 					c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("insert taos_slow_sql_detail error. %s", err)})
 					return
 				}
@@ -457,7 +457,7 @@ func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
 
 		if buf.Len() > len(sql_head) {
 			if _, err = gm.conn.Exec(context.Background(), buf.String(), qid|uint64((qid_counter%255))); err != nil {
-				gmLogger.WithError(err).Errorf("insert taos_slow_sql_detail error, data:%s, msg:%s", buf.String(), err)
+				gmLogger.Errorf("insert taos_slow_sql_detail error, data:%s, msg:%s", buf.String(), err)
 				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("insert taos_slow_sql_detail error. %s", err)})
 				return
 			}
