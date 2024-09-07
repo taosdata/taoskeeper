@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 )
@@ -57,6 +58,7 @@ func GetCfg() *config.Config {
 	c := &config.Config{
 		InstanceID: 64,
 		Port:       6043,
+		LogLevel:   "trace",
 		TDengine: config.TDengineRestful{
 			Host:     "127.0.0.1",
 			Port:     6041,
@@ -69,6 +71,15 @@ func GetCfg() *config.Config {
 				Name:    "keeper_test_log",
 				Options: map[string]interface{}{},
 			},
+		},
+		Log: config.Log{
+			Level:            "trace",
+			Path:             "/var/log/taos",
+			RotationCount:    10,
+			RotationTime:     24 * time.Hour,
+			RotationSize:     1073741824,
+			Compress:         true,
+			ReservedDiskSize: 1073741824,
 		},
 	}
 	return c
