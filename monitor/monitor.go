@@ -22,7 +22,7 @@ func StartMonitor(identity string, conf *config.Config, reporter *api.Reporter) 
 	if len(identity) == 0 {
 		hostname, err := os.Hostname()
 		if err != nil {
-			logger.Error("can not get hostname, error:%s", err)
+			logger.Errorf("can not get hostname, error:%s", err)
 		}
 		if len(hostname) > 40 {
 			hostname = hostname[:40]
