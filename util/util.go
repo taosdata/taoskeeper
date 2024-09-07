@@ -55,7 +55,8 @@ func EscapeInfluxProtocol(s string) string {
 
 func GetCfg() *config.Config {
 	c := &config.Config{
-		Port: 6043,
+		InstanceID: 64,
+		Port:       6043,
 		TDengine: config.TDengineRestful{
 			Host:     "127.0.0.1",
 			Port:     6041,
