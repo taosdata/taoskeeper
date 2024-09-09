@@ -10,11 +10,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
+	"github.com/taosdata/taoskeeper/util"
 )
 
 func TestAdapter2(t *testing.T) {
 	c := &config.Config{
-		Port: 6043,
+		InstanceID: 64,
+		Port:       6043,
 		TDengine: config.TDengineRestful{
 			Host:     "127.0.0.1",
 			Port:     6041,
@@ -43,16 +45,17 @@ func TestAdapter2(t *testing.T) {
 		"\"ws_other_success\": 1, \"ws_other_fail\": 2, \"ws_query_in_process\": 1, \"ws_write_in_process\": 2 }, " +
 		"\"endpoint\": \"adapter-1:6041\"}")
 	req, _ := http.NewRequest(http.MethodPost, "/adapter_report", body)
+	req.Header.Set("X-QID", "0x1234567890ABCD00")
 	router.ServeHTTP(w, req)
 	assert.Equal(t, 200, w.Code)
 
 	conn, err := db.NewConnectorWithDb(c.TDengine.Username, c.TDengine.Password, c.TDengine.Host, c.TDengine.Port, c.Metrics.Database.Name, c.TDengine.Usessl)
 	defer func() {
-		_, _ = conn.Query(context.Background(), "drop database if exists adapter_report_test")
+		_, _ = conn.Query(context.Background(), "drop database if exists adapter_report_test", util.GetQidOwn())
 	}()
 
 	assert.NoError(t, err)
-	data, err := conn.Query(context.Background(), "select * from adapter_report_test.adapter_requests where req_type=0")
+	data, err := conn.Query(context.Background(), "select * from adapter_report_test.adapter_requests where req_type=0", util.GetQidOwn())
 
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(data.Data))
@@ -72,7 +75,7 @@ func TestAdapter2(t *testing.T) {
 	assert.Equal(t, uint32(1), data.Data[0][14])
 	assert.Equal(t, uint32(2), data.Data[0][15])
 
-	data, err = conn.Query(context.Background(), "select * from adapter_report_test.adapter_requests where req_type=1")
+	data, err = conn.Query(context.Background(), "select * from adapter_report_test.adapter_requests where req_type=1", util.GetQidOwn())
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(data.Data))
 	assert.Equal(t, uint32(10), data.Data[0][1])
@@ -91,5 +94,5 @@ func TestAdapter2(t *testing.T) {
 	assert.Equal(t, uint32(1), data.Data[0][14])
 	assert.Equal(t, uint32(2), data.Data[0][15])
 
-	conn.Exec(context.Background(), "drop database "+c.Metrics.Database.Name)
+	conn.Exec(context.Background(), "drop database "+c.Metrics.Database.Name, util.GetQidOwn())
 }

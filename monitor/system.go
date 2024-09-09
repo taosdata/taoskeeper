@@ -77,13 +77,13 @@ func Start(collectDuration time.Duration, inCGroup bool) {
 	if inCGroup {
 		collector, err := NewCGroupCollector()
 		if err != nil {
-			logger.WithError(err).Fatal("new normal controller")
+			logger.Errorf("new normal group controller error, msg:%s", err)
 		}
 		SysMonitor.collector = collector
 	} else {
 		collector, err := NewNormalCollector()
 		if err != nil {
-			logger.WithError(err).Fatal("new normal controller")
+			logger.Errorf("new normal controller error, msg:%s", err)
 		}
 		SysMonitor.collector = collector
 	}
