@@ -114,7 +114,7 @@ func (c *Connector) Query(ctx context.Context, sql string, qid uint64) (*Data, e
 	data.Head, err = rows.Columns()
 	columnCount := len(data.Head)
 	if err != nil {
-		dbLogger.Errorf("get columns error: %v", err)
+		dbLogger.Errorf("get columns error, msg:%s", err)
 		return nil, err
 	}
 	scanData := make([]interface{}, columnCount)
@@ -126,13 +126,13 @@ func (c *Connector) Query(ctx context.Context, sql string, qid uint64) (*Data, e
 		err = rows.Scan(scanData...)
 		if err != nil {
 			rows.Close()
-			dbLogger.Errorf("rows scan error: %v", err)
+			dbLogger.Errorf("rows scan error, msg:%s", err)
 			return nil, err
 		}
 		data.Data = append(data.Data, tmp)
 	}
 
-	dbLogger.Tracef("get data: %v", data)
+	dbLogger.Tracef("get data:%v", data)
 	return data, nil
 }
 

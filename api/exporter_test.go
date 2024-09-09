@@ -239,7 +239,7 @@ func TestPutMetrics(t *testing.T) {
 	ctx := context.Background()
 	data, err := conn.Query(ctx, "select info from log_summary", util.GetQidOwn())
 	if err != nil {
-		logger.Errorf("execute sql: %s, error: %s", "select * from log_summary", err)
+		logger.Errorf("execute sql:%s, error:%s", "select * from log_summary", err)
 		t.Fatal(err)
 	}
 	for _, info := range data.Data {
@@ -275,7 +275,7 @@ func TestPutMetrics(t *testing.T) {
 	for table, tableInfo := range tables {
 		data, err = conn.Query(ctx, fmt.Sprintf("select %s from %s", tableInfo.TsName, table), util.GetQidOwn())
 		if err != nil {
-			logger.Errorf("execute sql: %s, error: %s", "select * from "+table, err)
+			logger.Errorf("execute sql:%s, error:%s", "select * from "+table, err)
 			t.Fatal(err)
 		}
 
@@ -289,7 +289,7 @@ func TestPutMetrics(t *testing.T) {
 
 	data, err = conn.Query(ctx, "select * from  information_schema.ins_stables where stable_name = 'm_info'", util.GetQidOwn())
 	if err != nil {
-		logger.Errorf("execute sql: %s, error: %s", "m_info is not droped", err)
+		logger.Errorf("execute sql:%s, error:%s", "m_info is not droped", err)
 		t.Fatal(err)
 	}
 	assert.Equal(t, 0, len(data.Data))

@@ -212,11 +212,11 @@ func (cmd *Command) ProcessDrop(conf *config.Config) {
 		"taosadapter_restful_http_request_total",
 	}
 	ctx := context.Background()
-	logger.Infof("use database: %s", conf.Metrics.Database.Name)
+	logger.Infof("use database:%s", conf.Metrics.Database.Name)
 
 	for _, stable := range dropStableList {
 		if _, err := cmd.conn.Exec(ctx, "DROP STABLE IF EXISTS "+stable, util.GetQidOwn()); err != nil {
-			logger.Errorf("drop stable %s, error: %s", stable, err)
+			logger.Errorf("drop stable %s, error:%s", stable, err)
 			panic(err)
 		}
 	}
@@ -255,7 +255,7 @@ func (cmd *Command) TransferDataToDest(data *db.Data, dstTable string, tagNum in
 				buf.WriteString(fmt.Sprintf(",%s=%s", data.Head[j], util.EscapeInfluxProtocol(tag)))
 			} else {
 				buf.WriteString(fmt.Sprintf(",%s=%s", data.Head[j], "unknown"))
-				logger.Errorf("tag value is empty, tag name: %s", data.Head[j])
+				logger.Errorf("tag value is empty, tag_name:%s", data.Head[j])
 			}
 		}
 		buf.WriteString(" ")
@@ -290,7 +290,7 @@ func (cmd *Command) TransferDataToDest(data *db.Data, dstTable string, tagNum in
 
 		if buf.Len() >= MAX_SQL_LEN {
 			if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-				logger.Tracef("buf: %v", buf.String())
+				logger.Tracef("buf:%v", buf.String())
 			}
 			err := cmd.lineWriteBody(&buf)
 			if err != nil {
@@ -303,7 +303,7 @@ func (cmd *Command) TransferDataToDest(data *db.Data, dstTable string, tagNum in
 
 	if buf.Len() > 0 {
 		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-			logger.Tracef("buf: %v", buf.String())
+			logger.Tracef("buf:%v", buf.String())
 		}
 		err := cmd.lineWriteBody(&buf)
 		if err != nil {
@@ -326,19 +326,19 @@ func (cmd *Command) TransferTaosdClusterBasicInfo() error {
 		"tags (cluster_id varchar(50))"
 
 	if _, err := cmd.conn.Exec(ctx, createTableSql, util.GetQidOwn()); err != nil {
-		logger.Errorf("create taosd_cluster_basic error: %s", err)
+		logger.Errorf("create taosd_cluster_basic error, msg:%s", err)
 		return err
 	}
 
-	logger.Tracef("%d", cmd.fromTime.UnixMilli())
+	logger.Tracef("fromeTime:%d", cmd.fromTime.UnixMilli())
 
 	for current := cmd.fromTime; current.Before(endTime); current = current.Add(time.Duration(delta)) {
 		querySql := fmt.Sprintf("select cluster_id, first_ep, first_ep_dnode_id, `version` as cluster_version, ts from cluster_info where ts > %d and ts <= %d",
 			current.UnixMilli(), current.Add(time.Duration(delta)).UnixMilli())
-		logger.Tracef("query sql: %s", querySql)
+		logger.Tracef("query sql:%s", querySql)
 		data, err := cmd.conn.Query(ctx, querySql, util.GetQidOwn())
 		if err != nil {
-			logger.Errorf("query cluster_info error: %s", err)
+			logger.Errorf("query cluster_info error, msg:%s", err)
 			return err
 		}
 
@@ -377,7 +377,7 @@ func (cmd *Command) TransferTaosdClusterBasicInfo() error {
 						return err
 					}
 					if rowsAffected <= 0 {
-						logger.Errorf("insert taosd_cluster_basic failed, rowsAffected: %d", rowsAffected)
+						logger.Errorf("insert taosd_cluster_basic failed, rowsAffected:%d", rowsAffected)
 					}
 					buf.Reset()
 				}
@@ -390,7 +390,7 @@ func (cmd *Command) TransferTaosdClusterBasicInfo() error {
 					return err
 				}
 				if rowsAffected <= 0 {
-					logger.Errorf("insert taosd_cluster_basic failed, rowsAffected: %d", rowsAffected)
+					logger.Errorf("insert taosd_cluster_basic failed, rowsAffected:%d", rowsAffected)
 				}
 			}
 		}
@@ -408,15 +408,15 @@ func (cmd *Command) TransferTableToDst(sql string, dstTable string, tagNum int) 
 	endTime := time.Now()
 	delta := time.Hour * 24 * 10
 
-	logger.Tracef("%d", cmd.fromTime.UnixMilli())
+	logger.Tracef("fromTime:%d", cmd.fromTime.UnixMilli())
 
 	for current := cmd.fromTime; current.Before(endTime); current = current.Add(time.Duration(delta)) {
 		querySql := fmt.Sprintf(sql+" a.ts > %d and a.ts <= %d",
 			current.UnixMilli(), current.Add(time.Duration(delta)).UnixMilli())
-		logger.Tracef("query sql: %s", querySql)
+		logger.Tracef("query sql:%s", querySql)
 		data, err := cmd.conn.Query(ctx, querySql, util.GetQidOwn())
 		if err != nil {
-			logger.Errorf("query cluster_info error: %s", err)
+			logger.Errorf("query cluster_info error, msg:%s", err)
 			return err
 		}
 
@@ -448,7 +448,7 @@ func (cmd *Command) lineWriteBody(buf *bytes.Buffer) error {
 	resp, err := cmd.client.Do(req)
 
 	if err != nil {
-		logger.Errorf("writing metrics exception: %v", err)
+		logger.Errorf("writing metrics exception, msg:%s", err)
 		return err
 	}
 

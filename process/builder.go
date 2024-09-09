@@ -30,11 +30,11 @@ func ExpandMetricsFromConfig(ctx context.Context, conn *db.Connector, cfg *confi
 	if err != nil {
 		return nil, err
 	}
-	builderLogger.Debugf("show stables: %s", sql)
+	builderLogger.Debugf("show stables:%s", sql)
 
 	for _, info := range data.Data {
 		name := info[0].(string)
-		builderLogger.Debug("stable: ", info)
+		builderLogger.Debug("stable:", info)
 
 		_, exist := tables[name]
 		if exist {

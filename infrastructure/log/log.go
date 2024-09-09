@@ -200,14 +200,6 @@ func (t *TaosLogFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 		b.WriteString("TRACE ")
 	}
 
-	// ws session id
-	v, exist = entry.Data[config.SessionIDKey]
-	if exist && v != nil {
-		b.WriteString(config.SessionIDKey)
-		b.WriteByte(':')
-		fmt.Fprintf(b, "0x%x, ", v)
-	}
-
 	// request id
 	v, exist = entry.Data[config.ReqIDKey]
 	if exist && v != nil {
@@ -223,7 +215,7 @@ func (t *TaosLogFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	// sort the keys
 	keys := make([]string, 0, len(entry.Data))
 	for k := range entry.Data {
-		if k == config.ModelKey || k == config.SessionIDKey || k == config.ReqIDKey {
+		if k == config.ModelKey || k == config.ReqIDKey {
 			continue
 		}
 		keys = append(keys, k)

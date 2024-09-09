@@ -26,7 +26,7 @@ func CreateDatabase(username string, password string, host string, port int, use
 
 	conn, err := db.NewConnector(username, password, host, port, usessl)
 	if err != nil {
-		commonLogger.Errorf("connect to adapter error, msg: %v", err)
+		commonLogger.Errorf("connect to adapter error, msg:%s", err)
 		return
 	}
 
@@ -75,7 +75,7 @@ func CreatTables(username string, password string, host string, port int, usessl
 	defer closeConn(conn)
 
 	for _, createSql := range createList {
-		commonLogger.Infof("execute sql: %s", createSql)
+		commonLogger.Infof("execute sql:%s", createSql)
 		if _, err = conn.Exec(ctx, createSql, util.GetQidOwn()); err != nil {
 			commonLogger.Errorf("execute sql: %s, error: %s", createSql, err)
 		}

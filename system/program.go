@@ -106,7 +106,7 @@ func (p *program) Start(s service.Service) error {
 	server := p.server
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			panic(fmt.Errorf("taoskeeper start up fail! %v", err))
+			panic(fmt.Errorf("taoskeeper start up fail! msg:%s", err))
 		}
 	}()
 	return nil

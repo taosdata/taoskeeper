@@ -68,7 +68,7 @@ func StartMonitor(identity string, conf *config.Config, reporter *api.Reporter) 
 
 			ctx := context.Background()
 			if _, err = conn.Exec(ctx, sql, util.GetQidOwn()); err != nil {
-				logger.Errorf("execute sql: %s, error: %s", sql, err)
+				logger.Errorf("execute sql:%s, error:%s", sql, err)
 			}
 
 			if err := conn.Close(); err != nil {

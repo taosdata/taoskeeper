@@ -150,14 +150,14 @@ func (r *Reporter) shouldDetectFields() bool {
 
 	version, err := r.serverVersion(ctx, conn)
 	if err != nil {
-		logger.Errorf("get server version error: %s", err)
+		logger.Errorf("get server version error:%s", err)
 		return false
 	}
 
 	// if server version is less than v3.0.3.0, should not detect fields.
 	versions := strings.Split(version, ".")
 	if len(versions) < 4 {
-		logger.Errorf("get server version error. version is: %s", version)
+		logger.Errorf("get server version error. version:%s", version)
 		return false
 	}
 
@@ -180,12 +180,12 @@ func (r *Reporter) serverVersion(ctx context.Context, conn *db.Connector) (versi
 	}
 
 	if len(res.Data) == 0 {
-		logger.Errorf("get server version error. response is %+v", res)
+		logger.Errorf("get server version error. response:%+v", res)
 		return
 	}
 
 	if len(res.Data) != 1 && len(res.Data[0]) != 1 {
-		logger.Errorf("get server version error. response is %+v", res)
+		logger.Errorf("get server version error. response:%+v", res)
 		return
 	}
 
@@ -206,8 +206,8 @@ func (r *Reporter) columnInfo(ctx context.Context, conn *db.Connector, table str
 	}
 
 	if len(res.Data) != 1 && len(res.Data[0]) != 1 {
-		logger.Errorf("get field type for %s error. response is %+v", table, res)
-		panic(fmt.Sprintf("get field type for %s error. response is %+v", table, res))
+		logger.Errorf("get field type for %s error. response:%+v", table, res)
+		panic(fmt.Sprintf("get field type for %s error. response:%+v", table, res))
 	}
 
 	exists = true
@@ -229,8 +229,8 @@ func (r *Reporter) tagExist(ctx context.Context, conn *db.Connector, stable stri
 	}
 
 	if len(res.Data) != 1 && len(res.Data[0]) != 1 {
-		logger.Errorf("get tag_name for %s error. response is %+v", stable, res)
-		panic(fmt.Sprintf("get tag_name for %s error. response is %+v", stable, res))
+		logger.Errorf("get tag_name for %s error. response:%+v", stable, res)
+		panic(fmt.Sprintf("get tag_name for %s error. response:%+v", stable, res))
 	}
 
 	exists = true
@@ -301,9 +301,9 @@ func (r *Reporter) creatTables() {
 	defer r.closeConn(conn)
 
 	for _, createSql := range createList {
-		logger.Infof("execute sql: %s", createSql)
+		logger.Infof("execute sql:%s", createSql)
 		if _, err = conn.Exec(ctx, createSql, util.GetQidOwn()); err != nil {
-			logger.Errorf("execute sql: %s, error: %s", createSql, err)
+			logger.Errorf("execute sql:%s, error:%s", createSql, err)
 		}
 	}
 }
@@ -330,7 +330,8 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 			return
 		}
 		var report Report
-		logger.Tracef("report data: %s", string(data))
+
+		logger.Tracef("report data:%s", string(data))
 		if e := json.Unmarshal(data, &report); e != nil {
 			logger.Errorf("error occurred while unmarshal request, data:%s, error:%s", data, err)
 			return
@@ -358,7 +359,7 @@ func (r *Reporter) handlerFunc() gin.HandlerFunc {
 		ctx := context.Background()
 
 		for _, sql := range sqls {
-			logger.Tracef("execute sql %s", sql)
+			logger.Tracef("execute sql:%s", sql)
 			if _, err := conn.Exec(ctx, sql, util.GetQidOwn()); err != nil {
 				logger.Errorf("execute sql error, sql:%s, error:%s", sql, err)
 			}

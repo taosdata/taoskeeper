@@ -110,20 +110,20 @@ func (gm *GeneralMetric) Init(c gin.IRouter) error {
 
 	conn, err := db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database, gm.usessl)
 	if err != nil {
-		gmLogger.Error("init db connect error, msg:", err)
+		gmLogger.Errorf("init db connect error, msg:%s", err)
 		return err
 	}
 	gm.conn = conn
 
 	err = gm.createSTables()
 	if err != nil {
-		gmLogger.Error("create stable error, msg:", err)
+		gmLogger.Errorf("create stable error, msg:%s", err)
 		return err
 	}
 
 	err = gm.initColumnSeqMap()
 	if err != nil {
-		gmLogger.Error("init  gColumnSeqMap error, msg:", err)
+		gmLogger.Errorf("init  gColumnSeqMap error, msg:%s", err)
 		return err
 	}
 
@@ -198,7 +198,7 @@ func (gm *GeneralMetric) handleFunc() gin.HandlerFunc {
 		var request []StableArrayInfo
 
 		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-			gmLogger.Trace("data: ", string(data))
+			gmLogger.Tracef("data:%s", string(data))
 		}
 
 		if err := json.Unmarshal(data, &request); err != nil {
@@ -215,7 +215,7 @@ func (gm *GeneralMetric) handleFunc() gin.HandlerFunc {
 		err = gm.handleBatchMetrics(request, qid)
 
 		if err != nil {
-			gmLogger.Errorf("process records error. %s", err)
+			gmLogger.Errorf("process records error. msg:%s", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("process records error. %s", err)})
 			return
 		}
@@ -272,7 +272,7 @@ func (gm *GeneralMetric) lineWriteBody(buf *bytes.Buffer, qid uint64) error {
 	}
 	req_data := buf.String()
 
-	// 构建新的 URL，增加 qid 参数
+	//build new URL，add qid to URL
 	urlWithQid := *gm.url
 	query := urlWithQid.Query()
 	query.Set("qid", fmt.Sprintf("%d", qid))
@@ -298,7 +298,7 @@ func (gm *GeneralMetric) lineWriteBody(buf *bytes.Buffer, qid uint64) error {
 	latency := endTime.Sub(startTime)
 
 	if err != nil {
-		gmLogger.Errorf("latency:%v, req_data:%v, url:%s, resp:%d, err:%v", latency, req_data, urlWithQid.String(), resp.StatusCode, err)
+		gmLogger.Errorf("latency:%v, req_data:%v, url:%s, resp:%d, err:%s", latency, req_data, urlWithQid.String(), resp.StatusCode, err)
 		return err
 	}
 	if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
@@ -334,7 +334,7 @@ func (gm *GeneralMetric) handleTaosdClusterBasic() gin.HandlerFunc {
 			return
 		}
 		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-			gmLogger.Trace("receive taosd cluster basic data:", string(data))
+			gmLogger.Tracef("receive taosd cluster basic data:%s", string(data))
 		}
 
 		var request ClusterBasic
@@ -394,7 +394,7 @@ func (gm *GeneralMetric) handleSlowSqlDetailBatch() gin.HandlerFunc {
 			return
 		}
 		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-			gmLogger.Trace("receive taos slow sql detail data: ", string(data))
+			gmLogger.Tracef("receive taos slow sql detail data:%s", string(data))
 		}
 
 		var request []SlowSqlDetailInfo
@@ -493,7 +493,7 @@ func writeTags(tags []Tag, stbName string, buf *bytes.Buffer) {
 				buf.WriteString(fmt.Sprintf(",%s=%s", name, util.EscapeInfluxProtocol(value)))
 			} else {
 				buf.WriteString(fmt.Sprintf(",%s=%s", name, "unknown"))
-				gmLogger.Errorf("tag value is empty, tag name: %s", name)
+				gmLogger.Errorf("tag value is empty, tag name:%s", name)
 			}
 		} else {
 			buf.WriteString(fmt.Sprintf(",%s=%s", name, "unknown"))
@@ -602,7 +602,9 @@ func (gm *GeneralMetric) initColumnSeqMap() error {
 			return err
 		}
 
-		gmLogger.Tracef("data: %v", data)
+		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
+			gmLogger.Tracef("data:%v", data)
+		}
 
 		if len(data.Data) < 1 || len(data.Data[0]) < 4 {
 			return fmt.Errorf("desc %s.%s error", gm.database, tableName)
@@ -622,7 +624,7 @@ func (gm *GeneralMetric) initColumnSeqMap() error {
 		Store(tableName, columnSeq)
 	}
 
-	gmLogger.Infof("gColumnSeqMap: %v", gColumnSeqMap)
+	gmLogger.Infof("gColumnSeqMap:%v", gColumnSeqMap)
 	return nil
 }
 

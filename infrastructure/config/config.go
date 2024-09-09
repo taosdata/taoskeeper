@@ -16,7 +16,6 @@ import (
 var Name = fmt.Sprintf("%skeeper", version.CUS_PROMPT)
 
 const ReqIDKey = "qid"
-const SessionIDKey = "sid"
 const ModelKey = "model"
 
 type Config struct {
