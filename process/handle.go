@@ -534,7 +534,9 @@ func (p *Processor) Process() {
 
 		for i, column := range table.ColumnList {
 			metric := p.metricMap[p.buildFQName(tableName, column)]
-			logger.Debugf("set metric [%s] value as %v", column, values[i])
+			for _, value := range values[i] {
+				logger.Tracef("set metric:%s, Label:%v, Value:%v", column, value.Label, value.Value)
+			}
 			if metric.GetValue() != nil {
 				values[i] = append(values[i], metric.GetValue()...)
 			}
