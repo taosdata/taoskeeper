@@ -133,9 +133,21 @@ ReadConfig:
 	conf.Cors.Init()
 	pool.Init(conf.GoPoolSize)
 	conf.Log.SetValue()
+
+	// set log level default value: info
+	if conf.LogLevel == "" {
+		conf.LogLevel = "info"
+	}
 	if viper.IsSet("log.level") {
 		conf.LogLevel = conf.Log.Level
+	} else {
+		viper.Set("log.level", "")
 	}
+
+	if !viper.IsSet("logLevel") {
+		viper.Set("logLevel", "")
+	}
+
 	Conf = &conf
 	return &conf
 }
@@ -149,7 +161,6 @@ func init() {
 	_ = viper.BindEnv("port", "TAOS_KEEPER_PORT")
 	pflag.IntP("port", "P", 6043, `http port. Env "TAOS_KEEPER_PORT"`)
 
-	viper.SetDefault("logLevel", "info")
 	_ = viper.BindEnv("logLevel", "TAOS_KEEPER_LOG_LEVEL")
 	pflag.String("logLevel", "info", `log level (trace debug info warning error). Env "TAOS_KEEPER_LOG_LEVEL"`)
 
@@ -228,7 +239,6 @@ func initLog() {
 		pflag.String("log.path", fmt.Sprintf("/var/log/%s", version.CUS_PROMPT), `log path. Env "TAOS_KEEPER_LOG_PATH"`)
 	}
 
-	viper.SetDefault("log.level", "info")
 	_ = viper.BindEnv("log.level", "TAOS_KEEPER_LOG_LEVEL")
 	pflag.String("log.level", "info", `log level (trace debug info warning error). Env "TAOS_KEEPER_LOG_LEVEL"`)
 
