@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -84,6 +85,20 @@ func (c *Connector) Exec(ctx context.Context, sql string, qid uint64) (int64, er
 	return res.RowsAffected()
 }
 
+func logData(data *Data, logger *logrus.Entry) {
+	if data == nil {
+		logger.Tracef("No data to display")
+		return
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		logger.Errorf("Failed to marshal data to JSON: %v", err)
+		return
+	}
+	logger.Tracef("%s", jsonData)
+}
+
 func (c *Connector) Query(ctx context.Context, sql string, qid uint64) (*Data, error) {
 	dbLogger = dbLogger.WithFields(logrus.Fields{config.ReqIDKey: qid})
 	ctx = context.WithValue(ctx, common.ReqIDKey, int64(qid))
@@ -132,7 +147,9 @@ func (c *Connector) Query(ctx context.Context, sql string, qid uint64) (*Data, e
 		data.Data = append(data.Data, tmp)
 	}
 
-	dbLogger.Tracef("get data:%v", data)
+	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
+		logData(data, dbLogger)
+	}
 	return data, nil
 }
 
