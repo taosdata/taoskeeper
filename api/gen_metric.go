@@ -602,10 +602,6 @@ func (gm *GeneralMetric) initColumnSeqMap() error {
 			return err
 		}
 
-		if logger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-			gmLogger.Tracef("data:%v", data)
-		}
-
 		if len(data.Data) < 1 || len(data.Data[0]) < 4 {
 			return fmt.Errorf("desc %s.%s error", gm.database, tableName)
 		}
