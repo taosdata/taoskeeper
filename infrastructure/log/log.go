@@ -133,6 +133,11 @@ func ConfigLog() {
 		fmt.Fprintln(writer, "                new log file")
 		fmt.Fprintln(writer, "==================================================")
 		fmt.Fprintf(writer, "config:%+v\n", config.Conf)
+
+		fmt.Fprintf(writer, "%-45s%v\n", "version", version.Version)
+		fmt.Fprintf(writer, "%-45s%v\n", "gitinfo", version.CommitID)
+		fmt.Fprintf(writer, "%-45s%v\n", "buildinfo", version.BuildInfo)
+
 		hook := NewFileHook(globalLogFormatter, writer)
 		logger.AddHook(hook)
 	})
