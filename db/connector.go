@@ -43,7 +43,7 @@ func NewConnector(username, password, host string, port int, usessl bool) (*Conn
 
 	db, err := sql.Open("taosRestful", fmt.Sprintf("%s:%s@%s(%s:%d)/?skipVerify=true", username, password, protocol, host, port))
 	if err != nil {
-		dbLogger.Tracef("connect to adapter failed, host:%s, port:%d, usessl:%v, error:%s", host, port, usessl, err)
+		dbLogger.Errorf("connect to adapter failed, host:%s, port:%d, usessl:%v, error:%s", host, port, usessl, err)
 		return nil, err
 	}
 
@@ -68,7 +68,7 @@ func NewConnectorWithDb(username, password, host string, port int, dbname string
 
 	db, err := sql.Open("taosRestful", fmt.Sprintf("%s:%s@%s(%s:%d)/%s?skipVerify=true", username, password, protocol, host, port, dbname))
 	if err != nil {
-		dbLogger.Tracef("connect to adapter failed, host:%s, port:%d, db:%s, usessl:%v, error:%s", host, port, dbname, usessl, err)
+		dbLogger.Errorf("connect to adapter failed, host:%s, port:%d, db:%s, usessl:%v, error:%s", host, port, dbname, usessl, err)
 		return nil, err
 	}
 	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
