@@ -89,7 +89,7 @@ func (c *Connector) Exec(ctx context.Context, sql string, qid uint64) (int64, er
 			log.Close(ctxLog)
 			os.Exit(1)
 		}
-		dbLogger.Errorf("latency:%v, err:%s", latency, err)
+		dbLogger.Errorf("latency:%v, sql:%s, err:%s", latency, sql, err)
 		return 0, err
 	}
 
@@ -138,7 +138,7 @@ func (c *Connector) Query(ctx context.Context, sql string, qid uint64) (*Data, e
 			log.Close(ctxLog)
 			os.Exit(1)
 		}
-		dbLogger.Errorf("latency:%v, err:%s", latency, err)
+		dbLogger.Errorf("latency:%v, sql:%s, err:%s", latency, sql, err)
 		return nil, err
 	}
 
