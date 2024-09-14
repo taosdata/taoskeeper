@@ -37,9 +37,7 @@ func NewConnector(username, password, host string, port int, usessl bool) (*Conn
 		protocol = "http"
 	}
 	dbLogger := dbLogger.WithFields(logrus.Fields{config.ReqIDKey: util.GetQidOwn()})
-	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-		dbLogger.Tracef("connect to adapter, host:%s, port:%d, usessl:%v", host, port, usessl)
-	}
+	dbLogger.Tracef("connect to adapter, host:%s, port:%d, usessl:%v", host, port, usessl)
 
 	db, err := sql.Open("taosRestful", fmt.Sprintf("%s:%s@%s(%s:%d)/?skipVerify=true", username, password, protocol, host, port))
 	if err != nil {
@@ -47,9 +45,7 @@ func NewConnector(username, password, host string, port int, usessl bool) (*Conn
 		return nil, err
 	}
 
-	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-		dbLogger.Tracef("connect to adapter success, host:%s, port:%d, usessl:%v", host, port, usessl)
-	}
+	dbLogger.Tracef("connect to adapter success, host:%s, port:%d, usessl:%v", host, port, usessl)
 	return &Connector{db: db}, nil
 }
 
@@ -62,18 +58,15 @@ func NewConnectorWithDb(username, password, host string, port int, dbname string
 	}
 
 	dbLogger := dbLogger.WithFields(logrus.Fields{config.ReqIDKey: util.GetQidOwn()})
-	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-		dbLogger.Tracef("connect to adapter, host:%s, port:%d, usessl:%v", host, port, usessl)
-	}
+	dbLogger.Tracef("connect to adapter, host:%s, port:%d, usessl:%v", host, port, usessl)
 
 	db, err := sql.Open("taosRestful", fmt.Sprintf("%s:%s@%s(%s:%d)/%s?skipVerify=true", username, password, protocol, host, port, dbname))
 	if err != nil {
 		dbLogger.Errorf("connect to adapter failed, host:%s, port:%d, db:%s, usessl:%v, error:%s", host, port, dbname, usessl, err)
 		return nil, err
 	}
-	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-		dbLogger.Tracef("connect to adapter success, host:%s, port:%d, db:%s, usessl:%v, error:%s", host, port, dbname, usessl, err)
-	}
+
+	dbLogger.Tracef("connect to adapter success, host:%s, port:%d, db:%s, usessl:%v", host, port, dbname, usessl)
 	return &Connector{db: db}, nil
 }
 
@@ -81,12 +74,8 @@ func (c *Connector) Exec(ctx context.Context, sql string, qid uint64) (int64, er
 	dbLogger := dbLogger.WithFields(logrus.Fields{config.ReqIDKey: qid})
 	ctx = context.WithValue(ctx, common.ReqIDKey, int64(qid))
 
+	dbLogger.Tracef("call adapter to execute sql:%s", sql)
 	startTime := time.Now()
-
-	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-		dbLogger.Tracef("call adapter to execute sql:%s", sql)
-	}
-
 	res, err := c.db.ExecContext(ctx, sql)
 
 	endTime := time.Now()
@@ -110,9 +99,7 @@ func (c *Connector) Exec(ctx context.Context, sql string, qid uint64) (int64, er
 		return rowsAffected, err
 	}
 
-	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-		dbLogger.Tracef("response ok, rowsAffected:%v, latency:%v", rowsAffected, latency)
-	}
+	dbLogger.Tracef("response ok, rowsAffected:%v, latency:%v", rowsAffected, latency)
 
 	return rowsAffected, err
 }
@@ -135,9 +122,7 @@ func (c *Connector) Query(ctx context.Context, sql string, qid uint64) (*Data, e
 	dbLogger := dbLogger.WithFields(logrus.Fields{config.ReqIDKey: qid})
 	ctx = context.WithValue(ctx, common.ReqIDKey, int64(qid))
 
-	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-		dbLogger.Tracef("call adapter to execute query, sql:%s", sql)
-	}
+	dbLogger.Tracef("call adapter to execute query, sql:%s", sql)
 
 	startTime := time.Now()
 	rows, err := c.db.QueryContext(ctx, sql)
@@ -157,9 +142,7 @@ func (c *Connector) Query(ctx context.Context, sql string, qid uint64) (*Data, e
 		return nil, err
 	}
 
-	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-		dbLogger.Tracef("response ok, latency:%v, sql:%s", latency, sql)
-	}
+	dbLogger.Tracef("response ok, latency:%v, sql:%s", latency, sql)
 
 	data := &Data{}
 	data.Head, err = rows.Columns()
