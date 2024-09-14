@@ -18,6 +18,7 @@ import (
 )
 
 var logger = logrus.New()
+var ServerID = randomID()
 var globalLogFormatter = &TaosLogFormatter{}
 var finish = make(chan struct{})
 var exist = make(chan struct{})
@@ -179,7 +180,7 @@ func (t *TaosLogFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	b.Reset()
 	b.WriteString(entry.Time.Format("01/02 15:04:05.000000"))
 	b.WriteByte(' ')
-	b.WriteString(fmt.Sprintf("%d", config.Conf.InstanceID))
+	b.WriteString(ServerID)
 	b.WriteByte(' ')
 	v, exist := entry.Data[config.ModelKey]
 	if exist && v != nil {
