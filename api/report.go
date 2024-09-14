@@ -72,14 +72,14 @@ func (r *Reporter) Init(c gin.IRouter) {
 }
 
 func (r *Reporter) getConn() *db.Connector {
-	qid := util.GetQidOwn()
-
-	logger := logger.WithFields(
-		logrus.Fields{config.ReqIDKey: qid},
-	)
 
 	conn, err := db.NewConnector(r.username, r.password, r.host, r.port, r.usessl)
 	if err != nil {
+		qid := util.GetQidOwn()
+
+		logger := logger.WithFields(
+			logrus.Fields{config.ReqIDKey: qid},
+		)
 		logger.Errorf("connect to database error, msg:%s", err)
 		panic(err)
 	}

@@ -15,6 +15,7 @@ import (
 	_ "github.com/taosdata/driver-go/v3/taosRestful"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
+	"github.com/taosdata/taoskeeper/util"
 )
 
 type Connector struct {
@@ -35,9 +36,19 @@ func NewConnector(username, password, host string, port int, usessl bool) (*Conn
 	} else {
 		protocol = "http"
 	}
+	dbLogger := dbLogger.WithFields(logrus.Fields{config.ReqIDKey: util.GetQidOwn()})
+	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
+		dbLogger.Tracef("connect to adapter, host:%s, port:%d, usessl:%v", host, port, usessl)
+	}
+
 	db, err := sql.Open("taosRestful", fmt.Sprintf("%s:%s@%s(%s:%d)/?skipVerify=true", username, password, protocol, host, port))
 	if err != nil {
+		dbLogger.Tracef("connect to adapter failed, host:%s, port:%d, usessl:%v, error:%s", host, port, usessl, err)
 		return nil, err
+	}
+
+	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
+		dbLogger.Tracef("connect to adapter success, host:%s, port:%d, usessl:%v", host, port, usessl)
 	}
 	return &Connector{db: db}, nil
 }
@@ -49,18 +60,33 @@ func NewConnectorWithDb(username, password, host string, port int, dbname string
 	} else {
 		protocol = "http"
 	}
+
+	dbLogger := dbLogger.WithFields(logrus.Fields{config.ReqIDKey: util.GetQidOwn()})
+	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
+		dbLogger.Tracef("connect to adapter, host:%s, port:%d, usessl:%v", host, port, usessl)
+	}
+
 	db, err := sql.Open("taosRestful", fmt.Sprintf("%s:%s@%s(%s:%d)/%s?skipVerify=true", username, password, protocol, host, port, dbname))
 	if err != nil {
+		dbLogger.Tracef("connect to adapter failed, host:%s, port:%d, db:%s, usessl:%v, error:%s", host, port, dbname, usessl, err)
 		return nil, err
+	}
+	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
+		dbLogger.Tracef("connect to adapter success, host:%s, port:%d, db:%s, usessl:%v, error:%s", host, port, dbname, usessl, err)
 	}
 	return &Connector{db: db}, nil
 }
 
 func (c *Connector) Exec(ctx context.Context, sql string, qid uint64) (int64, error) {
-	dbLogger = dbLogger.WithFields(logrus.Fields{config.ReqIDKey: qid})
+	dbLogger := dbLogger.WithFields(logrus.Fields{config.ReqIDKey: qid})
 	ctx = context.WithValue(ctx, common.ReqIDKey, int64(qid))
 
 	startTime := time.Now()
+
+	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
+		dbLogger.Tracef("call adapter to execute sql:%s", sql)
+	}
+
 	res, err := c.db.ExecContext(ctx, sql)
 
 	endTime := time.Now()
@@ -74,15 +100,21 @@ func (c *Connector) Exec(ctx context.Context, sql string, qid uint64) (int64, er
 			log.Close(ctxLog)
 			os.Exit(1)
 		}
-		dbLogger.Errorf("latency:%v, sql:%s, err:%s", latency, sql, err)
+		dbLogger.Errorf("latency:%v, err:%s", latency, err)
 		return 0, err
 	}
 
-	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-		dbLogger.Tracef("latency:%v, sql:%s", latency, sql)
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		dbLogger.Errorf("latency:%v, err:%s", latency, err)
+		return rowsAffected, err
 	}
 
-	return res.RowsAffected()
+	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
+		dbLogger.Tracef("response ok, rowsAffected:%v, latency:%v", rowsAffected, latency)
+	}
+
+	return rowsAffected, err
 }
 
 func logData(data *Data, logger *logrus.Entry) {
@@ -96,12 +128,16 @@ func logData(data *Data, logger *logrus.Entry) {
 		logger.Errorf("Failed to marshal data to JSON: %v", err)
 		return
 	}
-	logger.Tracef("%s", jsonData)
+	logger.Tracef("query result data:%s", jsonData)
 }
 
 func (c *Connector) Query(ctx context.Context, sql string, qid uint64) (*Data, error) {
-	dbLogger = dbLogger.WithFields(logrus.Fields{config.ReqIDKey: qid})
+	dbLogger := dbLogger.WithFields(logrus.Fields{config.ReqIDKey: qid})
 	ctx = context.WithValue(ctx, common.ReqIDKey, int64(qid))
+
+	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
+		dbLogger.Tracef("call adapter to execute query, sql:%s", sql)
+	}
 
 	startTime := time.Now()
 	rows, err := c.db.QueryContext(ctx, sql)
@@ -117,12 +153,12 @@ func (c *Connector) Query(ctx context.Context, sql string, qid uint64) (*Data, e
 			log.Close(ctxLog)
 			os.Exit(1)
 		}
-		dbLogger.Errorf("latency:%v, sql:%s, err:%s", latency, sql, err)
+		dbLogger.Errorf("latency:%v, err:%s", latency, err)
 		return nil, err
 	}
 
 	if dbLogger.Logger.IsLevelEnabled(logrus.TraceLevel) {
-		dbLogger.Tracef("latency:%v, sql:%s", latency, sql)
+		dbLogger.Tracef("response ok, latency:%v, sql:%s", latency, sql)
 	}
 
 	data := &Data{}
