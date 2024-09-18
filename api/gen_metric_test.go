@@ -254,3 +254,94 @@ func TestGenMetric(t *testing.T) {
 		}
 	})
 }
+func TestGetSubTableName(t *testing.T) {
+	tests := []struct {
+		stbName string
+		tagMap  map[string]string
+		want    string
+	}{
+		{
+			stbName: "taosx_sys",
+			tagMap:  map[string]string{"taosx_id": "123"},
+			want:    "sys_123",
+		},
+		{
+			stbName: "taosx_agent",
+			tagMap:  map[string]string{"taosx_id": "123", "agent_id": "456"},
+			want:    "agent_123_456",
+		},
+		{
+			stbName: "taosx_connector",
+			tagMap:  map[string]string{"taosx_id": "123", "ds_name": "ds", "task_id": "789"},
+			want:    "connector_123_ds_789",
+		},
+		{
+			stbName: "taosx_task_example",
+			tagMap:  map[string]string{"taosx_id": "123", "task_id": "789"},
+			want:    "task_123_example_789",
+		},
+		{
+			stbName: "taosd_cluster_info",
+			tagMap:  map[string]string{"cluster_id": "123"},
+			want:    "clusterId_123",
+		},
+		{
+			stbName: "taosd_vgroups_info",
+			tagMap:  map[string]string{"cluster_id": "123", "vgroup_id": "456", "database_name": "db"},
+			want:    "db_vgroup_456_clusterId_123",
+		},
+		{
+			stbName: "taosd_dnodes_info",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_ep": "ep"},
+			want:    "ep_clusterId_123",
+		},
+		{
+			stbName: "taosd_dnodes_status",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_ep": "ep"},
+			want:    "ep_clusterId_123",
+		},
+		{
+			stbName: "taosd_dnodes_log_dirs",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_ep": "ep", "log_dir_name": "log"},
+			want:    "ep_log_clusterId_123",
+		},
+		{
+			stbName: "taosd_dnodes_data_dirs",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_ep": "ep", "log_dir_name": "log", "data_dir_level": "5"},
+			want:    "ep_log_level_5_clusterId_123",
+		},
+		{
+			stbName: "taosd_mnodes_info",
+			tagMap:  map[string]string{"cluster_id": "123", "mnode_ep": "mnode"},
+			want:    "mnode_clusterId_123",
+		},
+		{
+			stbName: "taosd_vnodes_info",
+			tagMap:  map[string]string{"cluster_id": "123", "database_name": "db", "vgroup_id": "456", "dnode_id": "789"},
+			want:    "db_dnodeId_789_vgroupId_456_clusterId_123",
+		},
+		{
+			stbName: "taosd_sql_req",
+			tagMap:  map[string]string{"username": "user", "sql_type": "select", "result": "success", "dnode_ep": "ep", "vgroup_id": "456", "cluster_id": "123"},
+			want:    "user_select_success_ep_vgroupId_456_clusterId_123",
+		},
+		{
+			stbName: "taos_sql_req",
+			tagMap:  map[string]string{"username": "user", "sql_type": "select", "result": "success", "cluster_id": "123"},
+			want:    "user_select_success_clusterId_123",
+		},
+		{
+			stbName: "taos_slow_sql",
+			tagMap:  map[string]string{"username": "user", "duration": "100ms", "result": "success", "cluster_id": "123"},
+			want:    "user_100ms_success_clusterId_123",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.stbName, func(t *testing.T) {
+			if got := get_sub_table_name(tt.stbName, tt.tagMap); got != tt.want {
+				panic(fmt.Sprintf("get_sub_table_name() = %v, want %v", got, tt.want))
+			}
+		})
+	}
+}

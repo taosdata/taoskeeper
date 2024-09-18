@@ -481,6 +481,31 @@ func checkKeysExist(data map[string]string, keys ...string) bool {
 }
 
 func get_sub_table_name(stbName string, tagMap map[string]string) string {
+	if strings.HasPrefix(stbName, "taosx") {
+		switch stbName {
+		case "taosx_sys":
+			if checkKeysExist(tagMap, "taosx_id") {
+				return fmt.Sprintf("sys_%s", tagMap["taosx_id"])
+			}
+		case "taosx_agent":
+			if checkKeysExist(tagMap, "taosx_id", "agent_id") {
+				return fmt.Sprintf("agent_%s_%s", tagMap["taosx_id"], tagMap["agent_id"])
+			}
+		case "taosx_connector":
+			if checkKeysExist(tagMap, "taosx_id", "ds_name", "task_id") {
+				return fmt.Sprintf("connector_%s_%s_%s", tagMap["taosx_id"], tagMap["ds_name"], tagMap["task_id"])
+			}
+		default:
+			if strings.HasPrefix(stbName, "taosx_task_") {
+				ds_name := stbName[len("taosx_task_"):]
+				if checkKeysExist(tagMap, "taosx_id", "task_id") {
+					return fmt.Sprintf("task_%s_%s_%s", tagMap["taosx_id"], ds_name, tagMap["task_id"])
+				}
+			}
+			return ""
+		}
+	}
+
 	switch stbName {
 	case "taosd_cluster_info":
 		if checkKeysExist(tagMap, "cluster_id") {
@@ -490,11 +515,7 @@ func get_sub_table_name(stbName string, tagMap map[string]string) string {
 		if checkKeysExist(tagMap, "cluster_id", "vgroup_id", "database_name") {
 			return fmt.Sprintf("%s_vgroup_%s_clusterId_%s", tagMap["database_name"], tagMap["vgroup_id"], tagMap["cluster_id"])
 		}
-	case "taosd_dnodes_info":
-		if checkKeysExist(tagMap, "cluster_id", "dnode_ep") {
-			return fmt.Sprintf("%s_clusterId_%s", tagMap["dnode_ep"], tagMap["cluster_id"])
-		}
-	case "taosd_dnodes_status":
+	case "taosd_dnodes_info", "taosd_dnodes_status":
 		if checkKeysExist(tagMap, "cluster_id", "dnode_ep") {
 			return fmt.Sprintf("%s_clusterId_%s", tagMap["dnode_ep"], tagMap["cluster_id"])
 		}
@@ -523,6 +544,26 @@ func get_sub_table_name(stbName string, tagMap map[string]string) string {
 		if checkKeysExist(tagMap, "cluster_id", "mnode_ep") {
 			return fmt.Sprintf("%s_clusterId_%s", tagMap["mnode_ep"], tagMap["cluster_id"])
 		}
+	case "taosd_vnodes_info":
+		if checkKeysExist(tagMap, "cluster_id", "database_name", "vgroup_id", "dnode_id") {
+			return fmt.Sprintf("%s_dnodeId_%s_vgroupId_%s_clusterId_%s", tagMap["database_name"], tagMap["dnode_id"], tagMap["vgroup_id"], tagMap["cluster_id"])
+		}
+	case "taosd_sql_req":
+		if checkKeysExist(tagMap, "username", "sql_type", "result", "dnode_ep", "vgroup_id", "cluster_id") {
+			return fmt.Sprintf("%s_%s_%s_%s_vgroupId_%s_clusterId_%s", tagMap["username"],
+				tagMap["sql_type"], tagMap["result"], tagMap["dnode_ep"], tagMap["vgroup_id"], tagMap["cluster_id"])
+		}
+	case "taos_sql_req":
+		if checkKeysExist(tagMap, "username", "sql_type", "result", "cluster_id") {
+			return fmt.Sprintf("%s_%s_%s_clusterId_%s", tagMap["username"],
+				tagMap["sql_type"], tagMap["result"], tagMap["cluster_id"])
+		}
+	case "taos_slow_sql":
+		if checkKeysExist(tagMap, "username", "duration", "result", "cluster_id") {
+			return fmt.Sprintf("%s_%s_%s_clusterId_%s", tagMap["username"],
+				tagMap["duration"], tagMap["result"], tagMap["cluster_id"])
+		}
+
 	default:
 		return ""
 	}
