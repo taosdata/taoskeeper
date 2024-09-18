@@ -44,7 +44,7 @@ func TestClusterBasic(t *testing.T) {
 	conn, err := db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database, gm.usessl)
 	assert.NoError(t, err)
 	defer func() {
-		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database))
+		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database), util.GetQidOwn())
 	}()
 
 	t.Run(testcfg.name, func(t *testing.T) {
@@ -54,7 +54,7 @@ func TestClusterBasic(t *testing.T) {
 		router.ServeHTTP(w, req)
 		assert.Equal(t, 200, w.Code)
 
-		data, err := conn.Query(context.Background(), fmt.Sprintf("select ts, cluster_id from %s.%s where ts=%d", gm.database, testcfg.tbname, testcfg.ts))
+		data, err := conn.Query(context.Background(), fmt.Sprintf("select ts, cluster_id from %s.%s where ts=%d", gm.database, testcfg.tbname, testcfg.ts), util.GetQidOwn())
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(data.Data))
 		assert.Equal(t, testcfg.expect, data.Data[0][1])
@@ -108,7 +108,7 @@ func TestClusterBasic(t *testing.T) {
 	conn, err = db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database, gm.usessl)
 	assert.NoError(t, err)
 	defer func() {
-		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database))
+		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database), util.GetQidOwn())
 	}()
 
 	t.Run(testcfg.name, func(t *testing.T) {
@@ -118,7 +118,7 @@ func TestClusterBasic(t *testing.T) {
 		router.ServeHTTP(w, req)
 		assert.Equal(t, 200, w.Code)
 
-		data, err := conn.Query(context.Background(), fmt.Sprintf("select start_ts, cluster_id from %s.%s where start_ts=%d", gm.database, testcfg.tbname, testcfg.ts))
+		data, err := conn.Query(context.Background(), fmt.Sprintf("select start_ts, cluster_id from %s.%s where start_ts=%d", gm.database, testcfg.tbname, testcfg.ts), util.GetQidOwn())
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(data.Data))
 		assert.Equal(t, testcfg.expect, data.Data[0][1])
@@ -234,7 +234,7 @@ func TestGenMetric(t *testing.T) {
 	conn, err := db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database, gm.usessl)
 	assert.NoError(t, err)
 	defer func() {
-		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database))
+		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database), util.GetQidOwn())
 	}()
 
 	t.Run(testcfg.name, func(t *testing.T) {
@@ -246,7 +246,7 @@ func TestGenMetric(t *testing.T) {
 
 		for _, tbname := range testcfg.tbname {
 			for _, ts := range testcfg.ts {
-				data, err := conn.Query(context.Background(), fmt.Sprintf("select _ts, cluster_id from %s.%s where _ts=%d", gm.database, tbname, ts))
+				data, err := conn.Query(context.Background(), fmt.Sprintf("select _ts, cluster_id from %s.%s where _ts=%d", gm.database, tbname, ts), util.GetQidOwn())
 				assert.NoError(t, err)
 				assert.Equal(t, 1, len(data.Data))
 				assert.Equal(t, testcfg.expect, data.Data[0][1])

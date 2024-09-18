@@ -1,11 +1,7 @@
-# Start with debug middleware for gin
-debug = false
+instanceId = 64
 
 # Listen port, default is 6043
 port = 6043
-
-# log level
-loglevel = "info"
 
 # go pool size
 gopoolsize = 50000
@@ -42,7 +38,9 @@ cachemodel = "both"
 incgroup = false
 
 [log]
-#path = "/var/log/taos"
-rotationCount = 5
+level = "info"
+rotationCount = 30
 rotationTime = "24h"
-rotationSize = 100000000
+rotationSize = "1GB"
+compress = true
+reservedDiskSize = "1GB"

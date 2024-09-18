@@ -20,7 +20,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var logger = log.GetLogger("program")
+var logger = log.GetLogger("PRG")
 
 func Init() *http.Server {
 	conf := config.InitConfig()
@@ -33,7 +33,7 @@ func Init() *http.Server {
 		return nil
 	}
 
-	router := web.CreateRouter(conf.Debug, &conf.Cors, false)
+	router := web.CreateRouter(false, &conf.Cors, false)
 	router.Use(log.GinLog())
 	router.Use(log.GinRecoverLog())
 
@@ -106,7 +106,7 @@ func (p *program) Start(s service.Service) error {
 	server := p.server
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			panic(fmt.Errorf("taoskeeper start up fail! %v", err))
+			panic(fmt.Errorf("taoskeeper start up fail! msg:%s", err))
 		}
 	}()
 	return nil

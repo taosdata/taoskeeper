@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"runtime"
@@ -16,9 +15,12 @@ import (
 
 var Name = fmt.Sprintf("%skeeper", version.CUS_PROMPT)
 
+const ReqIDKey = "QID"
+const ModelKey = "model"
+
 type Config struct {
+	InstanceID       uint8
 	Cors             web.CorsConfig  `toml:"cors"`
-	Debug            bool            `toml:"debug"`
 	Port             int             `toml:"port"`
 	LogLevel         string          `toml:"loglevel"`
 	GoPoolSize       int             `toml:"gopoolsize"`
@@ -26,7 +28,7 @@ type Config struct {
 	TDengine         TDengineRestful `toml:"tdengine"`
 	Metrics          MetricsConfig   `toml:"metrics"`
 	Env              Environment     `toml:"environment"`
-	Log              Log             `toml:"log"`
+	Log              Log             `mapstructure:"-"`
 
 	Transfer string
 	FromTime string
@@ -123,10 +125,6 @@ ReadConfig:
 	if err = viper.Unmarshal(&conf); err != nil {
 		panic(err)
 	}
-	if conf.Debug {
-		j, _ := json.Marshal(conf)
-		fmt.Println("config file:", string(j))
-	}
 
 	conf.Transfer = *transfer
 	conf.FromTime = *fromTime
@@ -135,22 +133,36 @@ ReadConfig:
 	conf.Cors.Init()
 	pool.Init(conf.GoPoolSize)
 	conf.Log.SetValue()
+
+	// set log level default value: info
+	if conf.LogLevel == "" {
+		conf.LogLevel = "info"
+	}
+	if viper.IsSet("log.level") {
+		conf.LogLevel = conf.Log.Level
+	} else {
+		viper.Set("log.level", "")
+	}
+
+	if !viper.IsSet("logLevel") {
+		viper.Set("logLevel", "")
+	}
+
 	Conf = &conf
 	return &conf
 }
 
 func init() {
-	viper.SetDefault("debug", false)
-	_ = viper.BindEnv("debug", "TAOS_KEEPER_DEBUG")
-	pflag.Bool("debug", false, `enable debug mode. Env "TAOS_KEEPER_DEBUG"`)
+	viper.SetDefault("instanceId", 64)
+	_ = viper.BindEnv("instanceId", "TAOS_KEEPER_INSTANCE_ID")
+	pflag.Int("instanceId", 64, `instance ID. Env "TAOS_KEEPER_INSTANCE_ID"`)
 
 	viper.SetDefault("port", 6043)
 	_ = viper.BindEnv("port", "TAOS_KEEPER_PORT")
 	pflag.IntP("port", "P", 6043, `http port. Env "TAOS_KEEPER_PORT"`)
 
-	viper.SetDefault("logLevel", "info")
 	_ = viper.BindEnv("logLevel", "TAOS_KEEPER_LOG_LEVEL")
-	pflag.String("logLevel", "info", `log level (panic fatal error warn warning info debug trace). Env "TAOS_KEEPER_LOG_LEVEL"`)
+	pflag.String("logLevel", "info", `log level (trace debug info warning error). Env "TAOS_KEEPER_LOG_LEVEL"`)
 
 	viper.SetDefault("gopoolsize", 50000)
 	_ = viper.BindEnv("gopoolsize", "TAOS_KEEPER_POOL_SIZE")
@@ -227,22 +239,38 @@ func initLog() {
 		pflag.String("log.path", fmt.Sprintf("/var/log/%s", version.CUS_PROMPT), `log path. Env "TAOS_KEEPER_LOG_PATH"`)
 	}
 
+	_ = viper.BindEnv("log.level", "TAOS_KEEPER_LOG_LEVEL")
+	pflag.String("log.level", "info", `log level (trace debug info warning error). Env "TAOS_KEEPER_LOG_LEVEL"`)
+
 	viper.SetDefault("log.rotationCount", 5)
 	_ = viper.BindEnv("log.rotationCount", "TAOS_KEEPER_LOG_ROTATION_COUNT")
 	pflag.Uint("log.rotationCount", 5, `log rotation count. Env "TAOS_KEEPER_LOG_ROTATION_COUNT"`)
 
 	viper.SetDefault("log.rotationTime", time.Hour*24)
 	_ = viper.BindEnv("log.rotationTime", "TAOS_KEEPER_LOG_ROTATION_TIME")
-	pflag.Duration("log.rotationTime", time.Hour*24, `log rotation time. Env "TAOS_KEEPER_LOG_ROTATION_TIME"`)
+	pflag.Duration("log.rotationTime", time.Hour*24, `deprecated: log rotation time always 24 hours. Env "TAOS_KEEPER_LOG_ROTATION_TIME"`)
 
-	viper.SetDefault("log.rotationSize", "100000000")
+	viper.SetDefault("log.rotationSize", "1GB")
 	_ = viper.BindEnv("log.rotationSize", "TAOS_KEEPER_LOG_ROTATION_SIZE")
-	pflag.String("log.rotationSize", "100000000", `log rotation size(KB MB GB), must be a positive integer. Env "TAOS_KEEPER_LOG_ROTATION_SIZE"`)
+	pflag.String("log.rotationSize", "1GB", `log rotation size(KB MB GB), must be a positive integer. Env "TAOS_KEEPER_LOG_ROTATION_SIZE"`)
+
+	viper.SetDefault("log.compress", true)
+	_ = viper.BindEnv("log.compress", "TAOS_KEEPER_LOG_COMPRESS")
+	pflag.Bool("log.compress", true, `whether to compress old log. Env "TAOS_KEEPER_LOG_COMPRESS"`)
+
+	viper.SetDefault("log.reservedDiskSize", "1GB")
+	_ = viper.BindEnv("log.reservedDiskSize", "TAOS_KEEPER_LOG_RESERVED_DISK_SIZE")
+	pflag.String("log.reservedDiskSize", "1GB", `reserved disk size for log dir (KB MB GB), must be a positive integer. Env "TAOS_KEEPER_LOG_RESERVED_DISK_SIZE"`)
+
 }
 
 func (l *Log) SetValue() {
+	l.Level = viper.GetString("log.level")
 	l.Path = viper.GetString("log.path")
 	l.RotationCount = viper.GetUint("log.rotationCount")
 	l.RotationTime = viper.GetDuration("log.rotationTime")
-	l.RotationSize = viper.GetUint("log.rotationSize")
+	l.RotationSize = viper.GetSizeInBytes("log.rotationSize")
+	l.Compress = viper.GetBool("log.compress")
+	l.ReservedDiskSize = viper.GetSizeInBytes("log.reservedDiskSize")
+
 }
