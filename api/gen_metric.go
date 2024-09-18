@@ -29,6 +29,9 @@ var re = regexp.MustCompile("'+")
 var gmLogger = log.GetLogger("gen_metric")
 
 var MAX_SQL_LEN = 1000000
+var MAX_TABLE_NAME_LEN = 190
+
+var STABLE_NAME_KEY = "__stn"
 
 type ColumnSeq struct {
 	tagNames    []string
@@ -168,7 +171,7 @@ func NewGeneralMetric(conf *config.Config) *GeneralMetric {
 			Scheme:   protocol,
 			Host:     fmt.Sprintf("%s:%d", conf.TDengine.Host, conf.TDengine.Port),
 			Path:     "/influxdb/v1/write",
-			RawQuery: fmt.Sprintf("db=%s&precision=ms", conf.Metrics.Database.Name),
+			RawQuery: fmt.Sprintf("db=%s&precision=ms&table_name_key=%s", conf.Metrics.Database.Name, STABLE_NAME_KEY),
 		},
 	}
 	return imp
@@ -462,6 +465,68 @@ func writeTags(tags []Tag, stbName string, buf *bytes.Buffer) {
 			buf.WriteString(fmt.Sprintf(",%s=%s", name, "unknown"))
 		}
 	}
+
+	// add sub stable name
+	buf.WriteString(fmt.Sprintf(",%s=%s", STABLE_NAME_KEY, get_sub_table_name(stbName, tagMap)))
+}
+
+func checkKeysExist(data map[string]string, keys ...string) bool {
+	for _, key := range keys {
+		_, ok := data[key]
+		if !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func get_sub_table_name(stbName string, tagMap map[string]string) string {
+	switch stbName {
+	case "taosd_cluster_info":
+		if checkKeysExist(tagMap, "cluster_id") {
+			return fmt.Sprintf("clusterId_%s", tagMap["cluster_id"])
+		}
+	case "taosd_vgroups_info":
+		if checkKeysExist(tagMap, "cluster_id", "vgroup_id", "database_name") {
+			return fmt.Sprintf("%s_vgroup_%s_clusterId_%s", tagMap["database_name"], tagMap["vgroup_id"], tagMap["cluster_id"])
+		}
+	case "taosd_dnodes_info":
+		if checkKeysExist(tagMap, "cluster_id", "dnode_ep") {
+			return fmt.Sprintf("%s_clusterId_%s", tagMap["dnode_ep"], tagMap["cluster_id"])
+		}
+	case "taosd_dnodes_status":
+		if checkKeysExist(tagMap, "cluster_id", "dnode_ep") {
+			return fmt.Sprintf("%s_clusterId_%s", tagMap["dnode_ep"], tagMap["cluster_id"])
+		}
+	case "taosd_dnodes_log_dirs":
+		if checkKeysExist(tagMap, "cluster_id", "dnode_ep", "log_dir_name") {
+			subTableName := fmt.Sprintf("%s_%s_clusterId_%s", tagMap["dnode_ep"], tagMap["log_dir_name"], tagMap["cluster_id"])
+			if len(subTableName) <= MAX_TABLE_NAME_LEN {
+				return subTableName
+			}
+			return fmt.Sprintf("%s_%s_clusterId_%s", tagMap["dnode_ep"],
+				tagMap["log_dir_name"][0:len(tagMap["log_dir_name"])-(len(subTableName)-MAX_TABLE_NAME_LEN)],
+				tagMap["cluster_id"])
+		}
+	case "taosd_dnodes_data_dirs":
+		if checkKeysExist(tagMap, "cluster_id", "dnode_ep", "log_dir_name", "data_dir_level") {
+			subTableName := fmt.Sprintf("%s_%s_level_%s_clusterId_%s", tagMap["dnode_ep"], tagMap["log_dir_name"], tagMap["data_dir_level"], tagMap["cluster_id"])
+			if len(subTableName) <= MAX_TABLE_NAME_LEN {
+				return subTableName
+			}
+			return fmt.Sprintf("%s_%s_level_%s_clusterId_%s", tagMap["dnode_ep"],
+				tagMap["log_dir_name"][0:len(tagMap["log_dir_name"])-(len(subTableName)-MAX_TABLE_NAME_LEN)],
+				tagMap["data_dir_level"],
+				tagMap["cluster_id"])
+		}
+	case "taosd_mnodes_info":
+		if checkKeysExist(tagMap, "cluster_id", "mnode_ep") {
+			return fmt.Sprintf("%s_clusterId_%s", tagMap["mnode_ep"], tagMap["cluster_id"])
+		}
+	default:
+		return ""
+	}
+	return ""
 }
 
 func contains(array []string, item string) bool {
