@@ -283,63 +283,73 @@ func TestGetSubTableName(t *testing.T) {
 		{
 			stbName: "taosd_cluster_info",
 			tagMap:  map[string]string{"cluster_id": "123"},
-			want:    "clusterId_123",
+			want:    "cluster_123",
 		},
 		{
 			stbName: "taosd_vgroups_info",
 			tagMap:  map[string]string{"cluster_id": "123", "vgroup_id": "456", "database_name": "db"},
-			want:    "db_vgroup_456_clusterId_123",
+			want:    "vginfo_db_vgroup_456_cluster_123",
 		},
 		{
 			stbName: "taosd_dnodes_info",
-			tagMap:  map[string]string{"cluster_id": "123", "dnode_ep": "ep"},
-			want:    "ep_clusterId_123",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_id": "123"},
+			want:    "dinfo_123_cluster_123",
 		},
 		{
 			stbName: "taosd_dnodes_status",
-			tagMap:  map[string]string{"cluster_id": "123", "dnode_ep": "ep"},
-			want:    "ep_clusterId_123",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_id": "123"},
+			want:    "dstatus_123_cluster_123",
 		},
 		{
 			stbName: "taosd_dnodes_log_dirs",
-			tagMap:  map[string]string{"cluster_id": "123", "dnode_ep": "ep", "log_dir_name": "log"},
-			want:    "ep_log_clusterId_123",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_id": "123", "data_dir_name": "log"},
+			want:    "dlog_123_log_cluster_123",
+		},
+		{
+			stbName: "taosd_dnodes_log_dirs",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_id": "123", "data_dir_name": "loglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglog"},
+			want:    "dlog_123_9cdc719961a632a27603cd5ed9f1aee2_cluster_123",
 		},
 		{
 			stbName: "taosd_dnodes_data_dirs",
-			tagMap:  map[string]string{"cluster_id": "123", "dnode_ep": "ep", "log_dir_name": "log", "data_dir_level": "5"},
-			want:    "ep_log_level_5_clusterId_123",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_id": "123", "data_dir_name": "data", "data_dir_level": "5"},
+			want:    "ddata_123_data_level_5_cluster_123",
+		},
+		{
+			stbName: "taosd_dnodes_data_dirs",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_id": "123", "data_dir_name": "datadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadata", "data_dir_level": "5"},
+			want:    "ddata_123_03bf8dffdf6b97e08f347c6ae795998b_level_5_cluster_123",
 		},
 		{
 			stbName: "taosd_mnodes_info",
-			tagMap:  map[string]string{"cluster_id": "123", "mnode_ep": "mnode"},
-			want:    "mnode_clusterId_123",
+			tagMap:  map[string]string{"cluster_id": "123", "mnode_id": "12"},
+			want:    "minfo_12_cluster_123",
 		},
 		{
 			stbName: "taosd_vnodes_info",
 			tagMap:  map[string]string{"cluster_id": "123", "database_name": "db", "vgroup_id": "456", "dnode_id": "789"},
-			want:    "db_dnodeId_789_vgroupId_456_clusterId_123",
+			want:    "vninfo_db_dnode_789_vgroup_456_cluster_123",
 		},
 		{
 			stbName: "taosd_sql_req",
-			tagMap:  map[string]string{"username": "user", "sql_type": "select", "result": "success", "dnode_ep": "ep", "vgroup_id": "456", "cluster_id": "123"},
-			want:    "user_select_success_ep_vgroupId_456_clusterId_123",
+			tagMap:  map[string]string{"username": "user", "sql_type": "select", "result": "success", "dnode_id": "123", "vgroup_id": "456", "cluster_id": "123"},
+			want:    "taosdsql_user_select_success_123_vgroup_456_cluster_123",
 		},
 		{
 			stbName: "taos_sql_req",
 			tagMap:  map[string]string{"username": "user", "sql_type": "select", "result": "success", "cluster_id": "123"},
-			want:    "user_select_success_clusterId_123",
+			want:    "taossql_user_select_success_cluster_123",
 		},
 		{
 			stbName: "taos_slow_sql",
 			tagMap:  map[string]string{"username": "user", "duration": "100ms", "result": "success", "cluster_id": "123"},
-			want:    "user_100ms_success_clusterId_123",
+			want:    "slowsql_user_100ms_success_cluster_123",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.stbName, func(t *testing.T) {
-			if got := get_sub_table_name(tt.stbName, tt.tagMap); got != tt.want {
+			if got := get_sub_table_name_valid(tt.stbName, tt.tagMap); got != tt.want {
 				panic(fmt.Sprintf("get_sub_table_name() = %v, want %v", got, tt.want))
 			}
 		})

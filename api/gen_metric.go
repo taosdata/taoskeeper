@@ -29,9 +29,8 @@ var re = regexp.MustCompile("'+")
 var gmLogger = log.GetLogger("GEN")
 
 var MAX_SQL_LEN = 1000000
-var MAX_TABLE_NAME_LEN = 190
 
-var STABLE_NAME_KEY = "__stn"
+var STABLE_NAME_KEY = "priv_stn"
 
 type ColumnSeq struct {
 	tagNames    []string
@@ -503,8 +502,17 @@ func writeTags(tags []Tag, stbName string, buf *bytes.Buffer) {
 		}
 	}
 
-	// add sub stable name
-	buf.WriteString(fmt.Sprintf(",%s=%s", STABLE_NAME_KEY, get_sub_table_name(stbName, tagMap)))
+	// have sub table name
+	if _, ok := tagMap[STABLE_NAME_KEY]; ok {
+		return
+	}
+
+	subTableName := get_sub_table_name_valid(stbName, tagMap)
+	if subTableName != "" {
+		buf.WriteString(fmt.Sprintf(",%s=%s", STABLE_NAME_KEY, subTableName))
+	} else {
+		gmLogger.Errorf("get sub stable name error, stable name:%s, tag map:%v", stbName, tagMap)
+	}
 }
 
 func checkKeysExist(data map[string]string, keys ...string) bool {
@@ -515,6 +523,11 @@ func checkKeysExist(data map[string]string, keys ...string) bool {
 		}
 	}
 	return true
+}
+
+func get_sub_table_name_valid(stbName string, tagMap map[string]string) string {
+	stbName = get_sub_table_name(stbName, tagMap)
+	return util.ToValidTableName(stbName)
 }
 
 func get_sub_table_name(stbName string, tagMap map[string]string) string {
@@ -546,58 +559,62 @@ func get_sub_table_name(stbName string, tagMap map[string]string) string {
 	switch stbName {
 	case "taosd_cluster_info":
 		if checkKeysExist(tagMap, "cluster_id") {
-			return fmt.Sprintf("clusterId_%s", tagMap["cluster_id"])
+			return fmt.Sprintf("cluster_%s", tagMap["cluster_id"])
 		}
 	case "taosd_vgroups_info":
 		if checkKeysExist(tagMap, "cluster_id", "vgroup_id", "database_name") {
-			return fmt.Sprintf("%s_vgroup_%s_clusterId_%s", tagMap["database_name"], tagMap["vgroup_id"], tagMap["cluster_id"])
+			return fmt.Sprintf("vginfo_%s_vgroup_%s_cluster_%s", tagMap["database_name"], tagMap["vgroup_id"], tagMap["cluster_id"])
 		}
-	case "taosd_dnodes_info", "taosd_dnodes_status":
-		if checkKeysExist(tagMap, "cluster_id", "dnode_ep") {
-			return fmt.Sprintf("%s_clusterId_%s", tagMap["dnode_ep"], tagMap["cluster_id"])
+	case "taosd_dnodes_info":
+		if checkKeysExist(tagMap, "cluster_id", "dnode_id") {
+			return fmt.Sprintf("dinfo_%s_cluster_%s", tagMap["dnode_id"], tagMap["cluster_id"])
+		}
+	case "taosd_dnodes_status":
+		if checkKeysExist(tagMap, "cluster_id", "dnode_id") {
+			return fmt.Sprintf("dstatus_%s_cluster_%s", tagMap["dnode_id"], tagMap["cluster_id"])
 		}
 	case "taosd_dnodes_log_dirs":
-		if checkKeysExist(tagMap, "cluster_id", "dnode_ep", "log_dir_name") {
-			subTableName := fmt.Sprintf("%s_%s_clusterId_%s", tagMap["dnode_ep"], tagMap["log_dir_name"], tagMap["cluster_id"])
-			if len(subTableName) <= MAX_TABLE_NAME_LEN {
+		if checkKeysExist(tagMap, "cluster_id", "dnode_id", "data_dir_name") {
+			subTableName := fmt.Sprintf("dlog_%s_%s_cluster_%s", tagMap["dnode_id"], tagMap["data_dir_name"], tagMap["cluster_id"])
+			if len(subTableName) <= util.MAX_TABLE_NAME_LEN {
 				return subTableName
 			}
-			return fmt.Sprintf("%s_%s_clusterId_%s", tagMap["dnode_ep"],
-				tagMap["log_dir_name"][0:len(tagMap["log_dir_name"])-(len(subTableName)-MAX_TABLE_NAME_LEN)],
+			return fmt.Sprintf("dlog_%s_%s_cluster_%s", tagMap["dnode_id"],
+				util.GetMd5HexStr(tagMap["data_dir_name"]),
 				tagMap["cluster_id"])
 		}
 	case "taosd_dnodes_data_dirs":
-		if checkKeysExist(tagMap, "cluster_id", "dnode_ep", "log_dir_name", "data_dir_level") {
-			subTableName := fmt.Sprintf("%s_%s_level_%s_clusterId_%s", tagMap["dnode_ep"], tagMap["log_dir_name"], tagMap["data_dir_level"], tagMap["cluster_id"])
-			if len(subTableName) <= MAX_TABLE_NAME_LEN {
+		if checkKeysExist(tagMap, "cluster_id", "dnode_id", "data_dir_name", "data_dir_level") {
+			subTableName := fmt.Sprintf("ddata_%s_%s_level_%s_cluster_%s", tagMap["dnode_id"], tagMap["data_dir_name"], tagMap["data_dir_level"], tagMap["cluster_id"])
+			if len(subTableName) <= util.MAX_TABLE_NAME_LEN {
 				return subTableName
 			}
-			return fmt.Sprintf("%s_%s_level_%s_clusterId_%s", tagMap["dnode_ep"],
-				tagMap["log_dir_name"][0:len(tagMap["log_dir_name"])-(len(subTableName)-MAX_TABLE_NAME_LEN)],
+			return fmt.Sprintf("ddata_%s_%s_level_%s_cluster_%s", tagMap["dnode_id"],
+				util.GetMd5HexStr(tagMap["data_dir_name"]),
 				tagMap["data_dir_level"],
 				tagMap["cluster_id"])
 		}
 	case "taosd_mnodes_info":
-		if checkKeysExist(tagMap, "cluster_id", "mnode_ep") {
-			return fmt.Sprintf("%s_clusterId_%s", tagMap["mnode_ep"], tagMap["cluster_id"])
+		if checkKeysExist(tagMap, "cluster_id", "mnode_id") {
+			return fmt.Sprintf("minfo_%s_cluster_%s", tagMap["mnode_id"], tagMap["cluster_id"])
 		}
 	case "taosd_vnodes_info":
 		if checkKeysExist(tagMap, "cluster_id", "database_name", "vgroup_id", "dnode_id") {
-			return fmt.Sprintf("%s_dnodeId_%s_vgroupId_%s_clusterId_%s", tagMap["database_name"], tagMap["dnode_id"], tagMap["vgroup_id"], tagMap["cluster_id"])
+			return fmt.Sprintf("vninfo_%s_dnode_%s_vgroup_%s_cluster_%s", tagMap["database_name"], tagMap["dnode_id"], tagMap["vgroup_id"], tagMap["cluster_id"])
 		}
 	case "taosd_sql_req":
-		if checkKeysExist(tagMap, "username", "sql_type", "result", "dnode_ep", "vgroup_id", "cluster_id") {
-			return fmt.Sprintf("%s_%s_%s_%s_vgroupId_%s_clusterId_%s", tagMap["username"],
-				tagMap["sql_type"], tagMap["result"], tagMap["dnode_ep"], tagMap["vgroup_id"], tagMap["cluster_id"])
+		if checkKeysExist(tagMap, "username", "sql_type", "result", "dnode_id", "vgroup_id", "cluster_id") {
+			return fmt.Sprintf("taosdsql_%s_%s_%s_%s_vgroup_%s_cluster_%s", tagMap["username"],
+				tagMap["sql_type"], tagMap["result"], tagMap["dnode_id"], tagMap["vgroup_id"], tagMap["cluster_id"])
 		}
 	case "taos_sql_req":
 		if checkKeysExist(tagMap, "username", "sql_type", "result", "cluster_id") {
-			return fmt.Sprintf("%s_%s_%s_clusterId_%s", tagMap["username"],
+			return fmt.Sprintf("taossql_%s_%s_%s_cluster_%s", tagMap["username"],
 				tagMap["sql_type"], tagMap["result"], tagMap["cluster_id"])
 		}
 	case "taos_slow_sql":
 		if checkKeysExist(tagMap, "username", "duration", "result", "cluster_id") {
-			return fmt.Sprintf("%s_%s_%s_clusterId_%s", tagMap["username"],
+			return fmt.Sprintf("slowsql_%s_%s_%s_cluster_%s", tagMap["username"],
 				tagMap["duration"], tagMap["result"], tagMap["cluster_id"])
 		}
 
