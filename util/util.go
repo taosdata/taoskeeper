@@ -1,11 +1,14 @@
 package util
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"os"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
+	"unicode"
 
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 )
@@ -13,6 +16,8 @@ import (
 // https://github.com/containerd/cgroups/blob/main/utils.go
 var globalCounter64 uint64
 var globalCounter32 uint32
+
+var MAX_TABLE_NAME_LEN = 190
 
 func init() {
 	atomic.StoreUint64(&globalCounter64, 0)
@@ -122,4 +127,28 @@ func GetQidOwn() uint64 {
 	}
 	qid64 := uint64(config.Conf.InstanceID)<<56 | id
 	return qid64
+}
+
+func GetMd5HexStr(str string) string {
+	sum := md5.Sum([]byte(str))
+	return hex.EncodeToString(sum[:])
+}
+
+func isValidChar(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_'
+}
+
+func ToValidTableName(input string) string {
+	var builder strings.Builder
+
+	for _, r := range input {
+		if isValidChar(r) {
+			builder.WriteRune(unicode.ToLower(r))
+		} else {
+			builder.WriteRune('_')
+		}
+	}
+
+	result := builder.String()
+	return result
 }

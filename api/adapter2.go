@@ -138,8 +138,19 @@ func (a *Adapter) parseSql(report AdapterReport) string {
 }
 
 func (a *Adapter) tableName(endpoint string, reqType adapterReqType) string {
-	sum := md5.Sum([]byte(fmt.Sprintf("%s%d", endpoint, reqType)))
-	return fmt.Sprintf("t_%s", hex.EncodeToString(sum[:]))
+	var tbname string
+	if reqType == rest {
+		tbname = fmt.Sprintf("adapter_req_%s_%s", endpoint, "rest")
+	} else {
+		tbname = fmt.Sprintf("adapter_req_%s_%s", endpoint, "ws")
+	}
+
+	if len(tbname) <= util.MAX_TABLE_NAME_LEN {
+		return util.ToValidTableName(tbname)
+	} else {
+		sum := md5.Sum([]byte(fmt.Sprintf("%s%d", endpoint, reqType)))
+		return fmt.Sprintf("adapter_req_%s", hex.EncodeToString(sum[:]))
+	}
 }
 
 func (a *Adapter) createDatabase() error {
