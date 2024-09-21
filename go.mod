@@ -15,7 +15,7 @@ require (
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.9.0
 	github.com/taosdata/driver-go/v3 v3.5.7
-	github.com/taosdata/file-rotatelogs/v2 v2.4.2-0.20240902095728-4d2fc56eb8f5
+	github.com/taosdata/file-rotatelogs/v2 v2.5.2
 	github.com/taosdata/go-utils v0.0.0-20211022070036-018cc5f2432a
 )
 
