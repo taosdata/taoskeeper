@@ -10,6 +10,7 @@ type Log struct {
 	RotationCount    uint
 	RotationTime     time.Duration
 	RotationSize     uint
+	KeepDays         uint
 	Compress         bool
 	ReservedDiskSize uint
 }
