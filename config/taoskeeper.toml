@@ -1,11 +1,7 @@
-# Start with debug middleware for gin
-debug = false
+instanceId = 64
 
 # Listen port, default is 6043
 port = 6043
-
-# log level
-loglevel = "info"
 
 # go pool size
 gopoolsize = 50000
@@ -42,7 +38,16 @@ cachemodel = "both"
 incgroup = false
 
 [log]
-#path = "/var/log/taos"
-rotationCount = 5
-rotationTime = "24h"
-rotationSize = 100000000
+# The directory where log files are stored.
+# path = "/var/log/taos"
+level = "info"
+# Number of log file rotations before deletion.
+rotationCount = 30
+# The number of days to retain log files.
+keepDays = 30
+# The maximum size of a log file before rotation.
+rotationSize = "1GB"
+# If set to true, log files will be compressed.
+compress = false
+# Minimum disk space to reserve. Log files will not be written if disk space falls below this limit.
+reservedDiskSize = "1GB"

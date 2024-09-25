@@ -2,8 +2,6 @@ package monitor
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"time"
@@ -12,16 +10,17 @@ import (
 	"github.com/taosdata/taoskeeper/db"
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
+	"github.com/taosdata/taoskeeper/util"
 	"github.com/taosdata/taoskeeper/util/pool"
 )
 
-var logger = log.GetLogger("monitor")
+var logger = log.GetLogger("MON")
 
 func StartMonitor(identity string, conf *config.Config, reporter *api.Reporter) {
 	if len(identity) == 0 {
 		hostname, err := os.Hostname()
 		if err != nil {
-			logger.WithError(err).Panic("can not get hostname")
+			logger.Errorf("can not get hostname, error:%s", err)
 		}
 		if len(hostname) > 40 {
 			hostname = hostname[:40]
@@ -55,23 +54,29 @@ func StartMonitor(identity string, conf *config.Config, reporter *api.Reporter) 
 				reporter.GetTotalRep().Store(0)
 			}
 
-			kn := md5.Sum([]byte(identity))
-			sql := fmt.Sprintf("insert into `keeper_monitor_%s` using keeper_monitor tags ('%s') values ( now, "+
-				" %f, %f, %d)", hex.EncodeToString(kn[:]), identity, cpuPercent, memPercent, totalReport)
+			var kn string
+			if len(identity) <= util.MAX_TABLE_NAME_LEN {
+				kn = util.ToValidTableName(identity)
+			} else {
+				kn = util.GetMd5HexStr(identity)
+			}
+
+			sql := fmt.Sprintf("insert into `km_%s` using keeper_monitor tags ('%s') values ( now, "+
+				" %f, %f, %d)", kn, identity, cpuPercent, memPercent, totalReport)
 			conn, err := db.NewConnectorWithDb(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host,
 				conf.TDengine.Port, conf.Metrics.Database.Name, conf.TDengine.Usessl)
 			if err != nil {
-				logger.WithError(err).Errorf("connect to database error")
+				logger.Errorf("connect to database error, msg:%s", err)
 				return
 			}
 
 			ctx := context.Background()
-			if _, err = conn.Exec(ctx, sql); err != nil {
-				logger.Errorf("execute sql: %s, error: %s", sql, err)
+			if _, err = conn.Exec(ctx, sql, util.GetQidOwn()); err != nil {
+				logger.Errorf("execute sql:%s, error:%s", sql, err)
 			}
 
 			if err := conn.Close(); err != nil {
-				logger.WithError(err).Errorf("close connection error")
+				logger.Errorf("close connection error, msg:%s", err)
 			}
 		}
 	})

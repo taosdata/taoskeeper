@@ -44,7 +44,7 @@ func TestClusterBasic(t *testing.T) {
 	conn, err := db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database, gm.usessl)
 	assert.NoError(t, err)
 	defer func() {
-		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database))
+		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database), util.GetQidOwn())
 	}()
 
 	t.Run(testcfg.name, func(t *testing.T) {
@@ -54,7 +54,7 @@ func TestClusterBasic(t *testing.T) {
 		router.ServeHTTP(w, req)
 		assert.Equal(t, 200, w.Code)
 
-		data, err := conn.Query(context.Background(), fmt.Sprintf("select ts, cluster_id from %s.%s where ts=%d", gm.database, testcfg.tbname, testcfg.ts))
+		data, err := conn.Query(context.Background(), fmt.Sprintf("select ts, cluster_id from %s.%s where ts=%d", gm.database, testcfg.tbname, testcfg.ts), util.GetQidOwn())
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(data.Data))
 		assert.Equal(t, testcfg.expect, data.Data[0][1])
@@ -108,7 +108,7 @@ func TestClusterBasic(t *testing.T) {
 	conn, err = db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database, gm.usessl)
 	assert.NoError(t, err)
 	defer func() {
-		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database))
+		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database), util.GetQidOwn())
 	}()
 
 	t.Run(testcfg.name, func(t *testing.T) {
@@ -118,7 +118,7 @@ func TestClusterBasic(t *testing.T) {
 		router.ServeHTTP(w, req)
 		assert.Equal(t, 200, w.Code)
 
-		data, err := conn.Query(context.Background(), fmt.Sprintf("select start_ts, cluster_id from %s.%s where start_ts=%d", gm.database, testcfg.tbname, testcfg.ts))
+		data, err := conn.Query(context.Background(), fmt.Sprintf("select start_ts, cluster_id from %s.%s where start_ts=%d", gm.database, testcfg.tbname, testcfg.ts), util.GetQidOwn())
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(data.Data))
 		assert.Equal(t, testcfg.expect, data.Data[0][1])
@@ -234,7 +234,7 @@ func TestGenMetric(t *testing.T) {
 	conn, err := db.NewConnectorWithDb(gm.username, gm.password, gm.host, gm.port, gm.database, gm.usessl)
 	assert.NoError(t, err)
 	defer func() {
-		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database))
+		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", gm.database), util.GetQidOwn())
 	}()
 
 	t.Run(testcfg.name, func(t *testing.T) {
@@ -246,11 +246,112 @@ func TestGenMetric(t *testing.T) {
 
 		for _, tbname := range testcfg.tbname {
 			for _, ts := range testcfg.ts {
-				data, err := conn.Query(context.Background(), fmt.Sprintf("select _ts, cluster_id from %s.%s where _ts=%d", gm.database, tbname, ts))
+				data, err := conn.Query(context.Background(), fmt.Sprintf("select _ts, cluster_id from %s.%s where _ts=%d", gm.database, tbname, ts), util.GetQidOwn())
 				assert.NoError(t, err)
 				assert.Equal(t, 1, len(data.Data))
 				assert.Equal(t, testcfg.expect, data.Data[0][1])
 			}
 		}
 	})
+}
+func TestGetSubTableName(t *testing.T) {
+	tests := []struct {
+		stbName string
+		tagMap  map[string]string
+		want    string
+	}{
+		{
+			stbName: "taosx_sys",
+			tagMap:  map[string]string{"taosx_id": "123"},
+			want:    "sys_123",
+		},
+		{
+			stbName: "taosx_agent",
+			tagMap:  map[string]string{"taosx_id": "123", "agent_id": "456"},
+			want:    "agent_123_456",
+		},
+		{
+			stbName: "taosx_connector",
+			tagMap:  map[string]string{"taosx_id": "123", "ds_name": "ds", "task_id": "789"},
+			want:    "connector_123_ds_789",
+		},
+		{
+			stbName: "taosx_task_example",
+			tagMap:  map[string]string{"taosx_id": "123", "task_id": "789"},
+			want:    "task_123_example_789",
+		},
+		{
+			stbName: "taosd_cluster_info",
+			tagMap:  map[string]string{"cluster_id": "123"},
+			want:    "cluster_123",
+		},
+		{
+			stbName: "taosd_vgroups_info",
+			tagMap:  map[string]string{"cluster_id": "123", "vgroup_id": "456", "database_name": "db"},
+			want:    "vginfo_db_vgroup_456_cluster_123",
+		},
+		{
+			stbName: "taosd_dnodes_info",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_id": "123"},
+			want:    "dinfo_123_cluster_123",
+		},
+		{
+			stbName: "taosd_dnodes_status",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_id": "123"},
+			want:    "dstatus_123_cluster_123",
+		},
+		{
+			stbName: "taosd_dnodes_log_dirs",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_id": "123", "data_dir_name": "log"},
+			want:    "dlog_123_log_cluster_123",
+		},
+		{
+			stbName: "taosd_dnodes_log_dirs",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_id": "123", "data_dir_name": "loglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglogloglog"},
+			want:    "dlog_123_9cdc719961a632a27603cd5ed9f1aee2_cluster_123",
+		},
+		{
+			stbName: "taosd_dnodes_data_dirs",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_id": "123", "data_dir_name": "data", "data_dir_level": "5"},
+			want:    "ddata_123_data_level_5_cluster_123",
+		},
+		{
+			stbName: "taosd_dnodes_data_dirs",
+			tagMap:  map[string]string{"cluster_id": "123", "dnode_id": "123", "data_dir_name": "datadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadatadata", "data_dir_level": "5"},
+			want:    "ddata_123_03bf8dffdf6b97e08f347c6ae795998b_level_5_cluster_123",
+		},
+		{
+			stbName: "taosd_mnodes_info",
+			tagMap:  map[string]string{"cluster_id": "123", "mnode_id": "12"},
+			want:    "minfo_12_cluster_123",
+		},
+		{
+			stbName: "taosd_vnodes_info",
+			tagMap:  map[string]string{"cluster_id": "123", "database_name": "db", "vgroup_id": "456", "dnode_id": "789"},
+			want:    "vninfo_db_dnode_789_vgroup_456_cluster_123",
+		},
+		{
+			stbName: "taosd_sql_req",
+			tagMap:  map[string]string{"username": "user", "sql_type": "select", "result": "success", "dnode_id": "123", "vgroup_id": "456", "cluster_id": "123"},
+			want:    "taosdsql_user_select_success_123_vgroup_456_cluster_123",
+		},
+		{
+			stbName: "taos_sql_req",
+			tagMap:  map[string]string{"username": "user", "sql_type": "select", "result": "success", "cluster_id": "123"},
+			want:    "taossql_user_select_success_cluster_123",
+		},
+		{
+			stbName: "taos_slow_sql",
+			tagMap:  map[string]string{"username": "user", "duration": "100ms", "result": "success", "cluster_id": "123"},
+			want:    "slowsql_user_100ms_success_cluster_123",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.stbName, func(t *testing.T) {
+			if got := get_sub_table_name_valid(tt.stbName, tt.tagMap); got != tt.want {
+				panic(fmt.Sprintf("get_sub_table_name() = %v, want %v", got, tt.want))
+			}
+		})
+	}
 }

@@ -36,10 +36,10 @@ func TestHttps(t *testing.T) {
 	conn, err := db.NewConnectorWithDb(cfg.TDengine.Username, cfg.TDengine.Password, cfg.TDengine.Host, cfg.TDengine.Port, cfg.Metrics.Database.Name, cfg.TDengine.Usessl)
 	assert.NoError(t, err)
 	defer func() {
-		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", cfg.Metrics.Database.Name))
+		_, _ = conn.Query(context.Background(), fmt.Sprintf("drop database if exists %s", cfg.Metrics.Database.Name), util.GetQidOwn())
 	}()
 
-	data, err := conn.Query(context.Background(), "select server_version()")
+	data, err := conn.Query(context.Background(), "select server_version()", util.GetQidOwn())
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(data.Data))
 }

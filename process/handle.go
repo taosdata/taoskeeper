@@ -18,9 +18,11 @@ import (
 	"github.com/taosdata/taoskeeper/infrastructure/config"
 	"github.com/taosdata/taoskeeper/infrastructure/log"
 	"github.com/taosdata/taoskeeper/util/pool"
+
+	"github.com/taosdata/taoskeeper/util"
 )
 
-var logger = log.GetLogger("handle")
+var logger = log.GetLogger("HND")
 
 var metricNameMap = map[string]string{
 	"taosd_cluster_basic_first_ep":          "cluster_info_first_ep",
@@ -169,7 +171,7 @@ func (p *Processor) Describe(descs chan<- *prometheus.Desc) {
 
 func (p *Processor) Collect(metrics chan<- prometheus.Metric) {
 	for _, metric := range p.metricMap {
-		logger.Tracef("metric name %v", metric.FQName)
+		logger.Tracef("metric name:%v", metric.FQName)
 
 		switch metric.Type {
 		case Gauge:
@@ -268,6 +270,7 @@ type Value struct {
 }
 
 func NewProcessor(conf *config.Config) *Processor {
+
 	conn, err := db.NewConnector(conf.TDengine.Username, conf.TDengine.Password, conf.TDengine.Host, conf.TDengine.Port, conf.TDengine.Usessl)
 	if err != nil {
 		panic(err)
@@ -308,13 +311,13 @@ func (p *Processor) Prepare() {
 
 		err := pool.GoroutinePool.Submit(func() {
 			defer wg.Done()
-			data, err := p.dbConn.Query(p.ctx, fmt.Sprintf("describe %s", p.withDBName(tableName)))
+			data, err := p.dbConn.Query(p.ctx, fmt.Sprintf("describe %s", p.withDBName(tableName)), util.GetQidOwn())
 			if err != nil {
 				var tdEngineError *taosError.TaosError
 				if errors.As(err, &tdEngineError) {
-					logger.WithError(err).Errorf("table %s not exist, skip", tableName)
+					logger.Errorf("table %s not exist, skip it, error:%s", tableName, err)
 				} else {
-					logger.WithError(err).Errorf("could not get table %s metadata, skip", tableName)
+					logger.Errorf("could not get table %s metadata, skip it, error:%s", tableName, err)
 				}
 				return
 			}
@@ -356,11 +359,6 @@ func (p *Processor) Prepare() {
 				columnName, metricType := "", Summary
 				if !exist {
 					columnName = column
-
-					if tableName == "taosd_vnodes_info" {
-						logger.Info("tabl")
-						//bbb
-					}
 
 					if _, ok := metricTypeMap[tableName+"_"+columnName]; ok {
 						metricType = metricTypeMap[tableName+"_"+columnName]
@@ -469,7 +467,7 @@ func (p *Processor) Process() {
 		}
 		sql := b.String()
 		pool.BytesPoolPut(b)
-		data, err := p.dbConn.Query(p.ctx, sql)
+		data, err := p.dbConn.Query(p.ctx, sql, util.GetQidOwn())
 		logger.Debug(sql)
 		if err != nil {
 			logger.WithError(err).Errorln("select data sql:", sql)
@@ -536,7 +534,9 @@ func (p *Processor) Process() {
 
 		for i, column := range table.ColumnList {
 			metric := p.metricMap[p.buildFQName(tableName, column)]
-			logger.Debugf("set metric [%s] value as %v", column, values[i])
+			for _, value := range values[i] {
+				logger.Tracef("set metric:%s, Label:%v, Value:%v", column, value.Label, value.Value)
+			}
 			if metric.GetValue() != nil {
 				values[i] = append(values[i], metric.GetValue()...)
 			}
