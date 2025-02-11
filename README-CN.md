@@ -1,4 +1,4 @@
-# TaosKeeper
+# taosKeeper
 
 **注意：此仓库已归档，不再进行维护，新仓库将迁移至 [TDengine/tools/keeper](https://github.com/taosdata/TDengine/tree/main/tools/keeper)。**
 
