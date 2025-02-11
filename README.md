@@ -1,6 +1,6 @@
 # taosKeeper
 
-**Note: This repository has been archived and is no longer maintained. The new repository will be migrated to [TDengine/tools/keeper](https://github.com/taosdata/TDengine/tree/main/tools/keeper).**
+**Note: This repository has been archived and is no longer maintained. The new repository has been moved to [TDengine/tools/keeper](https://github.com/taosdata/TDengine/tree/main/tools/keeper).**
 
 ## Introduction
 
