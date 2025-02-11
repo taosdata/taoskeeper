@@ -1,4 +1,4 @@
-# TaosKeeper
+# taosKeeper
 
 **Note: This repository has been archived and is no longer maintained. The new repository will be migrated to [TDengine/tools/keeper](https://github.com/taosdata/TDengine/tree/main/tools/keeper).**
 
